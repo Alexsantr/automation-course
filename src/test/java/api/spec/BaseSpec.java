@@ -1,0 +1,32 @@
+package api.spec;
+
+import io.restassured.builder.ResponseSpecBuilder;
+import io.restassured.filter.log.LogDetail;
+import io.restassured.http.ContentType;
+import io.restassured.specification.RequestSpecification;
+import io.restassured.specification.ResponseSpecification;
+
+import static helpers.CustomAllureListener.withCustomTemplates;
+import static io.restassured.RestAssured.with;
+
+public class BaseSpec {
+    public static RequestSpecification requestSpec =
+            with()
+                    .contentType(ContentType.JSON)
+                    .accept(ContentType.JSON)
+                    .filter(withCustomTemplates())
+                    .log()
+                    .all();
+
+    public static ResponseSpecification statusCode200 =
+            new ResponseSpecBuilder()
+                    .expectStatusCode(200)
+                    .log(LogDetail.ALL)
+                    .build();
+
+    public static ResponseSpecification statusCode404 =
+            new ResponseSpecBuilder()
+                    .expectStatusCode(404)
+                    .log(LogDetail.ALL)
+                    .build();
+}

@@ -6,6 +6,7 @@ import model.auth.AuthResponse;
 import model.auth.RegisterRequest;
 import model.auth.RegisterResponse;
 
+import static api.auth.EndPoint.Auth.POST_REGISTER_USER;
 import static io.restassured.RestAssured.given;
 
 public class AuthApi implements IAuthApi {
@@ -16,7 +17,7 @@ public class AuthApi implements IAuthApi {
                 .contentType(ContentType.JSON)
                 .body(authRequest)
                 .when()
-                .post("http://localhost:8001/api/v1/auth/register")
+                .post(POST_REGISTER_USER)
                 .then()
                 .extract()
                 .as(RegisterResponse.class);
