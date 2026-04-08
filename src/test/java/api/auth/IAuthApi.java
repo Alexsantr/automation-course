@@ -5,10 +5,15 @@ import model.auth.AuthResponse;
 import model.auth.RegisterRequest;
 import model.auth.RegisterResponse;
 
-public interface IAuthApi
-{
+public interface IAuthApi {
+    /**
+     * Метод регистрации клиента
+     */
     RegisterResponse authUser(RegisterRequest authRequest);
 
-      AuthResponse getAuthUser(AuthRequest authRequest);
+    /**
+     * Метод авторизации клиента
+     */
+    AuthResponse getAuthUser(AuthRequest authRequest);
 
 }

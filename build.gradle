@@ -1,0 +1,70 @@
+plugins {
+    id 'java'
+    id 'io.qameta.allure' version '2.11.2'
+}
+
+group = 'trek'
+version = '1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+def selenideVersion = "6.19.1"
+def restAssuredVersion = "5.4.0"
+def allureVersion = "2.25.0"
+def junitVersion = "5.10.2"
+def cucumberVersion = "7.15.0"
+def ownerVersion = "1.0.12"
+
+dependencies {
+    // JUnit 5
+    testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
+    testImplementation "org.junit.platform:junit-platform-suite:1.10.2"
+
+
+    // Selenide + Allure интеграция
+    testImplementation "com.codeborne:selenide:$selenideVersion"
+    testImplementation "io.qameta.allure:allure-selenide:$allureVersion"
+    testImplementation 'io.qameta.allure:allure-rest-assured:2.25.0'
+
+    // REST Assured + JSON Schema + Allure интеграция
+    testImplementation "io.rest-assured:rest-assured:$restAssuredVersion"
+    testImplementation "io.rest-assured:json-schema-validator:$restAssuredVersion"
+    testImplementation "io.qameta.allure:allure-rest-assured:$allureVersion"
+
+    // Cucumber
+    testImplementation "io.cucumber:cucumber-java:$cucumberVersion"
+    testImplementation "io.cucumber:cucumber-junit-platform-engine:$cucumberVersion"
+    // PicoContainer — для передачи ScenarioContext между шагами
+    testImplementation "io.cucumber:cucumber-picocontainer:$cucumberVersion"
+
+    // Appium
+    testImplementation "io.appium:java-client:8.6.0"
+
+    // Config
+    testImplementation "org.aeonbits.owner:owner:$ownerVersion"
+
+    // Логи
+    testImplementation "org.slf4j:slf4j-simple:2.0.7"
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+    // Для тестов
+    testCompileOnly 'org.projectlombok:lombok:1.18.30'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+    testImplementation 'org.assertj:assertj-core:3.24.2'
+}
+
+test {
+    useJUnitPlatform()
+}
