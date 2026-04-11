@@ -4,6 +4,7 @@ import org.aeonbits.owner.Config;
 
 @Config.Sources({
         "classpath:${env}.properties",
+        "file:local.properties",
         "system:properties",
         "system:env"
 })
@@ -22,10 +23,10 @@ public interface DataConfig extends Config {
     String getBrowserVersion();
 
     @Key("baseUrl")
-    @DefaultValue("http://localhost:8001")
     String getBaseUrl();
 
     @Key("isRemote")
+    @DefaultValue("false")
     boolean isRemote();
 
     @Key("remoteUrl")
