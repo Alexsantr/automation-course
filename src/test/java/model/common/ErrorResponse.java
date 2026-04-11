@@ -8,13 +8,13 @@ import java.util.List;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ErrorResponse {
-    public String detail;
-    public List<ValidationError> errors;
+    private String detail;
+    private List<ValidationError> errors;
 
     @Data
     public static class ValidationError {
-        public List<Object> loc;
-        public String msg;
-        public String type;
+        private List<Object> loc;
+        private String msg;
+        private String type;
     }
 }

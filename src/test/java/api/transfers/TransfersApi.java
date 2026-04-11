@@ -1,4 +1,4 @@
-package api.tranfers;
+package api.transfers;
 
 import api.spec.BaseSpec;
 import model.transaction.TransactionPublic;

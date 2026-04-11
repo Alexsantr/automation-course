@@ -12,4 +12,9 @@ public interface IUserApi {
      * Получить пользователя по логину
      */
     UserPublic getUserByLogin(String token, String login);
+
+    /**
+     * Публичные данные пользователя по ID (без авторизации)
+     */
+    UserPublic getUserByIdPublic(int userId);
 }

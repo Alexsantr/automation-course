@@ -5,7 +5,6 @@ import api.accounts.IAccountsApi;
 import api.transfers.TransfersApi;
 import api.transfers.ITransfersApi;
 import io.cucumber.java.ru.Допустим;
-import io.cucumber.java.ru.Затем;
 import io.cucumber.java.ru.Когда;
 import io.cucumber.java.ru.Тогда;
 import model.account.AccountPublic;
@@ -28,11 +27,7 @@ public class TransfersServer {
     private final ScenarioContext context;
     private TransactionPublic transferTransaction;
     private TransferByAccountCheckResponse accountCheckResponse;
-    private TransferByPhoneCheckResponse phoneCheckResponse;
     private ExchangeRatesResponse exchangeRates;
-    private DailyUsageResponse dailyUsage;
-    private ErrorResponse errorResponse;
-    private int lastStatusCode;
     private String fromAccountBalanceBefore;
     private String toAccountBalanceBefore;
 
@@ -49,12 +44,20 @@ public class TransfersServer {
     }
 
     private void rememberHttpStatus(int code) {
-        this.lastStatusCode = code;
         context.putObject(ScenarioContext.LAST_STATUS_CODE, code);
     }
 
-    private Object getObject(String key) {
-        return context.getObject(key);
+    private void rememberTransaction(TransactionPublic tx) {
+        this.transferTransaction = tx;
+        if (tx != null) {
+            putObject(ScenarioContext.LAST_TRANSACTION, tx);
+        }
+    }
+
+    private void rememberError(Exception e) {
+        ErrorResponse er = new ErrorResponse();
+        er.setDetail(e.getMessage());
+        putObject(ScenarioContext.ERROR_RESPONSE, er);
     }
 
     private String get(String key) {
@@ -62,13 +65,7 @@ public class TransfersServer {
     }
 
     // ==================== ШАГИ ДЛЯ ПЕРЕВОДОВ ====================
-
-    @Допустим("пользователь авторизован в системе")
-    public void userIsAuthorized() {
-        String token = get(ScenarioContext.USER_TOKEN);
-        assertThat(token).isNotNull();
-        log.info("Пользователь авторизован в системе");
-    }
+    // «пользователь авторизован в системе» — шаг из AuthServer
 
     @Допустим("у пользователя есть счет отправителя с id {string} и балансом {string}")
     public void userHasFromAccountWithIdAndBalance(String accountId, String balance) {
@@ -82,13 +79,6 @@ public class TransfersServer {
     public void userHasToAccount(String accountId) {
         put(ScenarioContext.TO_ACCOUNT_ID, accountId);
         log.info("Счет получателя: id={}", accountId);
-    }
-
-    @Допустим("у пользователя есть счет с id {string} и балансом {string}")
-    public void userHasAccountWithIdAndBalance(String accountId, String balance) {
-        put(ScenarioContext.ACCOUNT_ID, accountId);
-        put(ScenarioContext.ACCOUNT_BALANCE, balance);
-        log.info("Счет: id={}, balance={}", accountId, balance);
     }
 
     @Допустим("существует счет с номером {string}")
@@ -138,13 +128,12 @@ public class TransfersServer {
                     .otp_code(get(ScenarioContext.OTP_CODE))
                     .build();
 
-            transferTransaction = transfersApi.createTransfer(token, request);
+            rememberTransaction(transfersApi.createTransfer(token, request));
             rememberHttpStatus(201);
             log.info("Перевод {} со счета {} на счет {} выполнен", amount, fromAccountId, toAccountId);
         } catch (Exception e) {
             rememberHttpStatus(400);
-            errorResponse = new ErrorResponse();
-            errorResponse.setDetail(e.getMessage());
+            rememberError(e);
             log.error("Ошибка при переводе: {}", e.getMessage());
         }
     }
@@ -171,13 +160,12 @@ public class TransfersServer {
                     .otp_code(get(ScenarioContext.OTP_CODE))
                     .build();
 
-            transferTransaction = transfersApi.createTransferByPhone(token, request);
+            rememberTransaction(transfersApi.createTransferByPhone(token, request));
             rememberHttpStatus(201);
             log.info("Перевод {} по телефону {} выполнен", amount, phone);
         } catch (Exception e) {
             rememberHttpStatus(400);
-            errorResponse = new ErrorResponse();
-            errorResponse.setDetail(e.getMessage());
+            rememberError(e);
             log.error("Ошибка при переводе: {}", e.getMessage());
         }
     }
@@ -204,13 +192,12 @@ public class TransfersServer {
                     .otp_code(get(ScenarioContext.OTP_CODE))
                     .build();
 
-            transferTransaction = transfersApi.exchangeCurrency(token, request);
+            rememberTransaction(transfersApi.exchangeCurrency(token, request));
             rememberHttpStatus(201);
             log.info("Обмен {} RUB на USD выполнен", amount);
         } catch (Exception e) {
             rememberHttpStatus(400);
-            errorResponse = new ErrorResponse();
-            errorResponse.setDetail(e.getMessage());
+            rememberError(e);
             log.error("Ошибка при обмене: {}", e.getMessage());
         }
     }
@@ -229,30 +216,16 @@ public class TransfersServer {
                     .otp_code(get(ScenarioContext.OTP_CODE))
                     .build();
 
-            transferTransaction = transfersApi.createTransfer(token, request);
+            rememberTransaction(transfersApi.createTransfer(token, request));
             rememberHttpStatus(201);
         } catch (Exception e) {
             rememberHttpStatus(400);
-            errorResponse = new ErrorResponse();
-            errorResponse.setDetail(e.getMessage());
+            rememberError(e);
             log.info("Ожидаемая ошибка при переводе: {}", e.getMessage());
         }
     }
 
     // ==================== ТОГДА ШАГИ ====================
-
-    @Тогда("транзакция успешно создана")
-    public void transactionSuccessfullyCreated() {
-        assertThat(transferTransaction).isNotNull();
-        assertThat(transferTransaction.getId()).isNotZero();
-        log.info("Транзакция создана с id: {}", transferTransaction.getId());
-    }
-
-    @Тогда("тип транзакции {string}")
-    public void transactionTypeEquals(String expectedType) {
-        assertThat(transferTransaction.getType()).isEqualTo(expectedType);
-        log.info("Тип транзакции: {}", expectedType);
-    }
 
     @Тогда("баланс счета отправителя уменьшился на {string}")
     public void fromAccountBalanceDecreasedBy(String expectedDecrease) {
@@ -373,18 +346,5 @@ public class TransfersServer {
 
         assertThat(actual).isGreaterThan(before);
         log.info("USD счет увеличился с {} до {}", balanceBefore, currentBalance);
-    }
-
-    @Тогда("сообщение об ошибке содержит {string}")
-    public void errorMessageContains(String expectedMessage) {
-        if (errorResponse != null) {
-            assertThat(errorResponse.getDetail()).contains(expectedMessage);
-        } else {
-            String errorMessage = get(ScenarioContext.LAST_ERROR_MESSAGE);
-            if (errorMessage != null) {
-                assertThat(errorMessage).contains(expectedMessage);
-            }
-        }
-        log.info("Сообщение об ошибке содержит: {}", expectedMessage);
     }
 }

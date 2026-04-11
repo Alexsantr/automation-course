@@ -4,7 +4,6 @@ import api.accounts.AccountsApi;
 import api.accounts.IAccountsApi;
 import api.payments.PaymentsApi;
 import api.payments.IPaymentsApi;
-import io.cucumber.java.ru.Допустим;
 import io.cucumber.java.ru.Когда;
 import io.cucumber.java.ru.Тогда;
 import model.account.AccountPublic;
@@ -31,7 +30,6 @@ public class PaymentsServer {
     private List<Map<String, String>> mobileOperators;
     private List<Map<String, String>> vendorProviders;
     private TransactionPublic paymentTransaction;
-    private ErrorResponse errorResponse;
     private int lastStatusCode;
     private String balanceBefore;
 
@@ -62,14 +60,6 @@ public class PaymentsServer {
 
     // ==================== ШАГИ ДЛЯ ПЛАТЕЖЕЙ ====================
 
-    @Допустим("у пользователя есть счет с id {string} и балансом {string}")
-    public void userHasAccountWithIdAndBalance(String accountId, String balance) {
-        put(ScenarioContext.ACCOUNT_ID, accountId);
-        put(ScenarioContext.ACCOUNT_BALANCE, balance);
-        balanceBefore = balance;
-        log.info("У пользователя есть счет: id={}, balance={}", accountId, balance);
-    }
-
     @Когда("клиент запрашивает список мобильных операторов")
     public void requestMobileOperators() {
         String token = get(ScenarioContext.USER_TOKEN);
@@ -81,7 +71,6 @@ public class PaymentsServer {
     public void payMobile(String operator, String phone, String amount) {
         String token = get(ScenarioContext.USER_TOKEN);
         String accountId = get(ScenarioContext.ACCOUNT_ID);
-
         // Сохраняем баланс до оплаты
         try {
             AccountPublic accountBefore = accountsApi.getAccountById(token, Integer.parseInt(accountId));
@@ -102,11 +91,13 @@ public class PaymentsServer {
         try {
             paymentTransaction = paymentsApi.payMobile(token, request);
             rememberHttpStatus(201);
+            putObject(ScenarioContext.LAST_TRANSACTION, paymentTransaction);
             log.info("Оплачена мобильная связь: оператор={}, телефон={}, сумма={}", operator, phone, amount);
         } catch (Exception e) {
             rememberHttpStatus(400);
-            errorResponse = new ErrorResponse();
-            errorResponse.setDetail(e.getMessage());
+            ErrorResponse er = new ErrorResponse();
+            er.setDetail(e.getMessage());
+            putObject(ScenarioContext.ERROR_RESPONSE, er);
             log.error("Ошибка при оплате: {}", e.getMessage());
         }
     }
@@ -136,11 +127,13 @@ public class PaymentsServer {
         try {
             paymentTransaction = paymentsApi.payVendor(token, request);
             rememberHttpStatus(201);
+            putObject(ScenarioContext.LAST_TRANSACTION, paymentTransaction);
             log.info("Оплачен поставщик: provider={}, account={}, сумма={}", provider, accountNumber, amount);
         } catch (Exception e) {
             rememberHttpStatus(400);
-            errorResponse = new ErrorResponse();
-            errorResponse.setDetail(e.getMessage());
+            ErrorResponse er = new ErrorResponse();
+            er.setDetail(e.getMessage());
+            putObject(ScenarioContext.ERROR_RESPONSE, er);
             log.error("Ошибка при оплате: {}", e.getMessage());
         }
     }
@@ -170,10 +163,12 @@ public class PaymentsServer {
         try {
             paymentTransaction = paymentsApi.payMobile(token, request);
             rememberHttpStatus(201);
+            putObject(ScenarioContext.LAST_TRANSACTION, paymentTransaction);
         } catch (Exception e) {
             rememberHttpStatus(400);
-            errorResponse = new ErrorResponse();
-            errorResponse.setDetail(e.getMessage());
+            ErrorResponse er = new ErrorResponse();
+            er.setDetail(e.getMessage());
+            putObject(ScenarioContext.ERROR_RESPONSE, er);
             log.error("Ожидаемая ошибка при оплате: {}", e.getMessage());
         }
     }
@@ -208,62 +203,35 @@ public class PaymentsServer {
         log.info("Все операторы содержат id и label");
     }
 
-    @Тогда("транзакция успешно создана")
-    public void transactionSuccessfullyCreated() {
-        assertThat(paymentTransaction).isNotNull();
-        assertThat(paymentTransaction.getId()).isNotZero();
-        log.info("Транзакция создана с id: {}", paymentTransaction.getId());
-    }
-
-    @Тогда("тип транзакции {string}")
-    public void transactionTypeEquals(String expectedType) {
-        assertThat(paymentTransaction.getType()).isEqualTo(expectedType);
-        log.info("Тип транзакции: {}", expectedType);
-    }
-
-    @Тогда("баланс счета уменьшился на {string}")
-    public void accountBalanceDecreasedBy(String expectedDecrease) {
-        String token = get(ScenarioContext.USER_TOKEN);
-        String accountId = get(ScenarioContext.ACCOUNT_ID);
-
-        // Получаем текущий баланс
-        AccountPublic currentAccount = accountsApi.getAccountById(token, Integer.parseInt(accountId));
-        String currentBalance = currentAccount.getBalance();
-
-        // Вычисляем ожидаемый баланс
-        BigDecimal before = new BigDecimal(balanceBefore);
-        BigDecimal decrease = new BigDecimal(expectedDecrease);
-        BigDecimal expected = before.subtract(decrease);
-        BigDecimal actual = new BigDecimal(currentBalance);
-
-        assertThat(actual).isEqualTo(expected);
-        log.info("Баланс счета уменьшился с {} на {} = {}",
-                balanceBefore, expectedDecrease, currentBalance);
-    }
+//    @Тогда("баланс счета уменьшился на {string}")
+//    public void accountBalanceDecreasedBy(String expectedDecrease) {
+//        String token = get(ScenarioContext.USER_TOKEN);
+//        String accountId = get(ScenarioContext.ACCOUNT_ID);
+//
+//        // Получаем текущий баланс
+//        AccountPublic currentAccount = accountsApi.getAccountById(token, Integer.parseInt(accountId));
+//        String currentBalance = currentAccount.getBalance();
+//
+//        String beforeBalance = balanceBefore != null ? balanceBefore : get(ScenarioContext.ACCOUNT_BALANCE);
+//        assertThat(beforeBalance).as("баланс до операции (из шага или API)").isNotNull();
+//
+//        // Вычисляем ожидаемый баланс
+//        BigDecimal before = new BigDecimal(beforeBalance);
+//        BigDecimal decrease = new BigDecimal(expectedDecrease);
+//        BigDecimal expected = before.subtract(decrease);
+//        BigDecimal actual = new BigDecimal(currentBalance);
+//
+//        assertThat(actual).isEqualTo(expected);
+//        log.info("Баланс счета уменьшился с {} на {} = {}",
+//                beforeBalance, expectedDecrease, currentBalance);
+//    }
 
     @Тогда("операция не выполнена из-за недостаточного баланса")
     public void operationFailedDueToInsufficientFunds() {
         assertThat(lastStatusCode).isEqualTo(400);
-        assertThat(errorResponse).isNotNull();
-        assertThat(errorResponse.getDetail()).contains("Insufficient funds");
+        ErrorResponse er = (ErrorResponse) getObject(ScenarioContext.ERROR_RESPONSE);
+        assertThat(er).isNotNull();
+        assertThat(er.getDetail()).contains("Insufficient funds");
         log.info("Операция не выполнена из-за недостаточного баланса");
-    }
-
-    @Тогда("сообщение об ошибке содержит {string}")
-    public void errorMessageContains(String expectedMessage) {
-        if (errorResponse != null) {
-            assertThat(errorResponse.getDetail()).contains(expectedMessage);
-        } else {
-            String errorMessage = get(ScenarioContext.LAST_ERROR_MESSAGE);
-            assertThat(errorMessage).contains(expectedMessage);
-        }
-        log.info("Сообщение об ошибке содержит: {}", expectedMessage);
-    }
-
-    @Тогда("чек содержит информацию о транзакции")
-    public void receiptContainsTransactionInfo() {
-        // Проверяем, что чек содержит информацию
-        assertThat(paymentTransaction).isNotNull();
-        log.info("Чек содержит информацию о транзакции");
     }
 }

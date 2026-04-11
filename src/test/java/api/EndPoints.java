@@ -1,24 +1,27 @@
 package api;
 
-public class EndPoints {
+public final class EndPoints {
 
     private EndPoints() {
         throw new UnsupportedOperationException("Utility class");
     }
 
-    // ==================== HEALTH ====================
-    public static final class Health {
-        public static final String GET_HEALTH = "/health";
+    // ==================== AUTH ====================
+    public static final class Auth {
+        public static final String POST_REGISTER = "/api/v1/auth/register";
+        public static final String POST_LOGIN = "/api/v1/auth/login";
 
-        private Health() {}
+        private Auth() {
+        }
     }
 
-    // ==================== DEV ====================
-    public static final class Dev {
-        public static final String GET_TRACE_RECENT = "/api/v1/dev/trace/recent";
-        public static final String POST_TRACE_CLEAR = "/api/v1/dev/trace/clear";
+    // ==================== PROFILE ====================
+    public static final class Profile {
+        public static final String GET_PROFILE = "/api/v1/profile";
+        public static final String PUT_PROFILE = "/api/v1/profile";
 
-        private Dev() {}
+        private Profile() {
+        }
     }
 
     // ==================== HELPER (для тестов) ====================
@@ -27,35 +30,20 @@ public class EndPoints {
         public static final String GET_OTP_PREVIEW = "/api/v1/helper/otp/preview";
         public static final String POST_CLEAR_BROWSER = "/api/v1/helper/clear-browser";
 
-        public static String increaseBalance(int accountId) {
+        public static String getIncreaseBalancePath(int accountId) {
             return String.format("/api/v1/helper/accounts/%d/increase", accountId);
         }
 
-        public static String decreaseBalance(int accountId) {
+        public static String getDecreaseBalancePath(int accountId) {
             return String.format("/api/v1/helper/accounts/%d/decrease", accountId);
         }
 
-        public static String zeroBalance(int accountId) {
+        public static String getZeroBalancePath(int accountId) {
             return String.format("/api/v1/helper/accounts/%d/zero", accountId);
         }
 
-        private Helper() {}
-    }
-
-    // ==================== AUTH ====================
-    public static final class Auth {
-        public static final String POST_REGISTER = "/api/v1/auth/register";
-        public static final String POST_LOGIN = "/api/v1/auth/login";
-
-        private Auth() {}
-    }
-
-    // ==================== PROFILE ====================
-    public static final class Profile {
-        public static final String GET_PROFILE = "/api/v1/profile";
-        public static final String PUT_PROFILE = "/api/v1/profile";
-
-        private Profile() {}
+        private Helper() {
+        }
     }
 
     // ==================== ACCOUNTS ====================
@@ -64,15 +52,20 @@ public class EndPoints {
         public static final String POST_CREATE_ACCOUNT = "/api/v1/accounts";
         public static final String PUT_PRIMARY_ACCOUNTS = "/api/v1/accounts/primary";
 
-        public static String closeAccount(int accountId) {
+        public static String getAccountByIdPath(int accountId) {
             return String.format("/api/v1/accounts/%d", accountId);
         }
 
-        public static String topUpAccount(int accountId) {
+        public static String getCloseAccountPath(int accountId) {
+            return String.format("/api/v1/accounts/%d", accountId);
+        }
+
+        public static String getTopUpAccountPath(int accountId) {
             return String.format("/api/v1/accounts/%d/topup", accountId);
         }
 
-        private Accounts() {}
+        private Accounts() {
+        }
     }
 
     // ==================== TRANSFERS ====================
@@ -87,18 +80,20 @@ public class EndPoints {
         public static final String GET_DAILY_USAGE = "/api/v1/transfers/daily-usage";
         public static final String GET_RATES = "/api/v1/transfers/rates";
 
-        private Transfers() {}
+        private Transfers() {
+        }
     }
 
     // ==================== TRANSACTIONS ====================
     public static final class Transactions {
         public static final String GET_TRANSACTIONS = "/api/v1/transactions";
 
-        public static String getReceipt(int transactionId) {
+        public static String getReceiptPath(int transactionId) {
             return String.format("/api/v1/transactions/%d/receipt", transactionId);
         }
 
-        private Transactions() {}
+        private Transactions() {
+        }
     }
 
     // ==================== PAYMENTS ====================
@@ -108,7 +103,8 @@ public class EndPoints {
         public static final String GET_VENDOR_PROVIDERS = "/api/v1/payments/vendor/providers";
         public static final String POST_VENDOR_PAYMENT = "/api/v1/payments/vendor";
 
-        private Payments() {}
+        private Payments() {
+        }
     }
 
     // ==================== ADMIN ====================
@@ -116,30 +112,55 @@ public class EndPoints {
         public static final String GET_USERS = "/api/v1/admin/users";
         public static final String POST_RESTORE_INITIAL_STATE = "/api/v1/admin/restore-initial-state";
 
-        public static String blockUser(int userId) {
+        public static String getBlockUserPath(int userId) {
             return String.format("/api/v1/admin/users/%d/block", userId);
         }
 
-        public static String unblockUser(int userId) {
+        public static String getUnblockUserPath(int userId) {
             return String.format("/api/v1/admin/users/%d/unblock", userId);
         }
 
-        public static String deleteUser(int userId) {
+        public static String getDeleteUserPath(int userId) {
             return String.format("/api/v1/admin/users/%d", userId);
         }
 
-        public static String getUserBanks(int userId) {
+        public static String getUserBanksPath(int userId) {
             return String.format("/api/v1/admin/users/%d/banks", userId);
         }
 
-        public static String updateUserBanks(int userId) {
+        public static String getUpdateUserBanksPath(int userId) {
             return String.format("/api/v1/admin/users/%d/banks", userId);
         }
 
-        public static String getUserTransactions(int userId) {
+        public static String getUserTransactionsPath(int userId) {
             return String.format("/api/v1/admin/users/%d/transactions", userId);
         }
 
-        private Admin() {}
+        private Admin() {
+        }
+    }
+
+    // ==================== USERS ====================
+    public static final class Users {
+        public static final String GET_USERS = "/api/v1/users";
+        public static final String GET_USER_BY_ID = "/api/v1/users/{id}";
+        public static final String POST_CREATE_USER = "/api/v1/users";
+        public static final String PUT_UPDATE_USER = "/api/v1/users/{id}";
+        public static final String DELETE_USER = "/api/v1/users/{id}";
+
+        public static String getUserByIdPath(int userId) {
+            return String.format("/api/v1/users/%d", userId);
+        }
+
+        public static String updateUserPath(int userId) {
+            return String.format("/api/v1/users/%d", userId);
+        }
+
+        public static String deleteUserPath(int userId) {
+            return String.format("/api/v1/users/%d", userId);
+        }
+
+        private Users() {
+        }
     }
 }

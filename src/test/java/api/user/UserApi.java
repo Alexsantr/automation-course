@@ -35,4 +35,16 @@ public class UserApi implements IUserApi {
                 .extract()
                 .as(UserPublic.class);
     }
+
+    @Override
+    public UserPublic getUserByIdPublic(int userId) {
+        return given()
+                .spec(BaseSpec.getRequestSpec())
+                .when()
+                .get(getUserByIdPath(userId))
+                .then()
+                .statusCode(200)
+                .extract()
+                .as(UserPublic.class);
+    }
 }

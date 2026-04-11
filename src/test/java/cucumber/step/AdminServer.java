@@ -1,10 +1,7 @@
 package cucumber.step;
 
 import api.admin.AdminApi;
-import api.user.UserApi;
-import api.user.IUserApi;
 import io.cucumber.java.ru.Допустим;
-import io.cucumber.java.ru.Затем;
 import io.cucumber.java.ru.Когда;
 import io.cucumber.java.ru.Тогда;
 import model.transaction.TransactionPublic;
@@ -19,13 +16,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class AdminServer {
     private static final AdminApi adminApi = new AdminApi();
-    private static final UserApi userApi = new UserApi();
     private static final Logger log = LoggerFactory.getLogger(AdminServer.class);
 
     private final ScenarioContext context;
     private List<UserPublic> usersList;
     private UserPublic updatedUser;
-    private List<TransactionPublic> userTransactions;
     private String actionResponse;
 
     public AdminServer(ScenarioContext context) {
@@ -40,27 +35,12 @@ public class AdminServer {
         context.putObject(key, value);
     }
 
-    private Object getObject(String key) {
-        return context.getObject(key);
-    }
-
     private String get(String key) {
         return context.get(key);
     }
 
     // ==================== ШАГИ ДЛЯ АДМИНИСТРИРОВАНИЯ ====================
-
-    @Допустим("администратор авторизован в системе")
-    public void adminIsAuthorized() {
-        String adminLogin = "admin";
-        String adminPassword = "admin";
-
-        // Здесь должна быть авторизация администратора
-        // AuthResponse authResponse = authApi.getAuthUser(new AuthRequest(adminLogin, adminPassword));
-        // put(ScenarioContext.ADMIN_TOKEN, authResponse.getAccess_token());
-
-        log.info("Администратор авторизован: login={}", adminLogin);
-    }
+    // «администратор авторизован в системе» — шаг из AuthServer (реальная авторизация)
 
     @Допустим("существует пользователь с id {string}")
     public void userExistsWithId(String userId) {
@@ -116,7 +96,7 @@ public class AdminServer {
     public void adminRequestsUserTransactions() {
         String adminToken = get(ScenarioContext.ADMIN_TOKEN);
         String userId = get(ScenarioContext.USER_ID);
-        userTransactions = adminApi.getUserTransactions(adminToken, Integer.parseInt(userId));
+        List<TransactionPublic> userTransactions = adminApi.getUserTransactions(adminToken, Integer.parseInt(userId));
         putObject(ScenarioContext.USER_TRANSACTIONS, userTransactions);
         log.info("Получены транзакции пользователя {}", userId);
     }
@@ -152,13 +132,6 @@ public class AdminServer {
         log.info("Статус пользователя изменен на: {}", expectedStatus);
     }
 
-    @Тогда("список транзакций не пустой")
-    public void transactionsListNotEmpty() {
-        assertThat(userTransactions).isNotNull();
-        assertThat(userTransactions).isNotEmpty();
-        log.info("Список транзакций не пустой");
-    }
-
     @Тогда("остался только один пользователь - администратор")
     public void onlyAdminUserRemains() {
         String adminToken = get(ScenarioContext.ADMIN_TOKEN);
@@ -167,7 +140,7 @@ public class AdminServer {
         assertThat(usersList).isNotNull();
         assertThat(usersList).hasSize(1);
 
-        UserPublic onlyUser = usersList.get(0);
+        UserPublic onlyUser = usersList.getFirst();
         assertThat(onlyUser.getRole()).isEqualTo("ADMIN");
 
         log.info("Остался только один пользователь - администратор");

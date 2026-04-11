@@ -2,8 +2,6 @@ package cucumber.step;
 
 import api.accounts.AccountsApi;
 import api.accounts.IAccountsApi;
-import io.cucumber.java.ru.Допустим;
-import io.cucumber.java.ru.Затем;
 import io.cucumber.java.ru.Когда;
 import io.cucumber.java.ru.Тогда;
 import model.account.*;
@@ -15,6 +13,7 @@ import utils.ScenarioContext;
 
 import java.util.List;
 
+import static java.lang.Integer.parseInt;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class AccountsServer {
@@ -26,8 +25,6 @@ public class AccountsServer {
     private AccountPublic createdAccount;
     private TransactionPublic topupTransaction;
     private String actionResponse;
-    private ErrorResponse errorResponse;  // ← для хранения ошибки
-    private int lastStatusCode;            // ← для хранения статус кода
 
     public AccountsServer(ScenarioContext context) {
         this.context = context;
@@ -42,21 +39,7 @@ public class AccountsServer {
     }
 
     private void rememberHttpStatus(int code) {
-        this.lastStatusCode = code;
         context.putObject(ScenarioContext.LAST_STATUS_CODE, code);
-    }
-
-    @Допустим("у пользователя есть счет с id {string}")
-    public void userHasAccountWithId(String accountId) {
-        put(ScenarioContext.ACCOUNT_ID, accountId);
-        log.info("Сохранен ID счета: {}", accountId);
-    }
-
-    @Допустим("у пользователя есть счет с id {string} и балансом {string}")
-    public void userHasAccountWithIdAndBalance(String accountId, String balance) {
-        put(ScenarioContext.ACCOUNT_ID, accountId);
-        put(ScenarioContext.ACCOUNT_BALANCE, balance);
-        log.info("Сохранен счет: id={}, balance={}", accountId, balance);
     }
 
     @Когда("клиент запрашивает список своих счетов")
@@ -94,6 +77,7 @@ public class AccountsServer {
 
         topupTransaction = accountsApi.topUpAccount(token, Integer.parseInt(accountId), request);
         rememberHttpStatus(201);
+        context.putObject(ScenarioContext.LAST_TRANSACTION, topupTransaction);
         log.info("Счет {} пополнен на сумму {}", accountId, amount);
     }
 
@@ -103,7 +87,7 @@ public class AccountsServer {
         String accountId = get(ScenarioContext.ACCOUNT_ID);
 
         try {
-            actionResponse = accountsApi.closeAccount(token, Integer.parseInt(accountId));
+            actionResponse = accountsApi.closeAccount(token, parseInt(accountId));
             rememberHttpStatus(200);
             log.info("Счет {} закрыт", accountId);
         } catch (Exception e) {
@@ -120,13 +104,15 @@ public class AccountsServer {
 
         try {
             // Пытаемся закрыть счет, но ожидаем ошибку
-            accountsApi.closeAccount(token, Integer.parseInt(accountId));
+            accountsApi.closeAccount(token, parseInt(accountId));
             rememberHttpStatus(200);
         } catch (Exception e) {
             // Сохраняем информацию об ошибке
             rememberHttpStatus(400);
-            errorResponse = new ErrorResponse();
+            // ← для хранения ошибки
+            ErrorResponse errorResponse = new ErrorResponse();
             errorResponse.setDetail(e.getMessage());
+            context.putObject(ScenarioContext.ERROR_RESPONSE, errorResponse);
             log.info("Ожидаемая ошибка при закрытии счета: {}", e.getMessage());
         }
     }
@@ -136,33 +122,24 @@ public class AccountsServer {
         clientTriesToCloseAccount();
     }
 
-    @Тогда("сообщение об ошибке содержит {string}")
-    public void errorMessageContains(String expectedMessage) {
-        if (errorResponse != null) {
-            assertThat(errorResponse.getDetail()).contains(expectedMessage);
-        } else {
-            // Альтернативный вариант - проверка через контекст
-            String errorMessage = get(ScenarioContext.LAST_ERROR_MESSAGE);
-            assertThat(errorMessage).contains(expectedMessage);
-        }
-        log.info("Сообщение об ошибке содержит: {}", expectedMessage);
-    }
-
     @Тогда("регистрация должна завершиться ошибкой с кодом {int}")
     public void registrationShouldFailWithStatusCode(int expectedStatusCode) {
-        assertThat(lastStatusCode).isEqualTo(expectedStatusCode);
+        Integer code = (Integer) context.getObject(ScenarioContext.LAST_STATUS_CODE);
+        assertThat(code).isEqualTo(expectedStatusCode);
         log.info("Регистрация завершилась ошибкой с кодом: {}", expectedStatusCode);
     }
 
     @Тогда("авторизация должна завершиться ошибкой с кодом {int}")
     public void authorizationShouldFailWithStatusCode(int expectedStatusCode) {
-        assertThat(lastStatusCode).isEqualTo(expectedStatusCode);
+        Integer code = (Integer) context.getObject(ScenarioContext.LAST_STATUS_CODE);
+        assertThat(code).isEqualTo(expectedStatusCode);
         log.info("Авторизация завершилась ошибкой с кодом: {}", expectedStatusCode);
     }
 
     @Тогда("попытка закрыть счет должна завершиться ошибкой")
     public void closeAccountShouldFail() {
-        assertThat(lastStatusCode).isNotEqualTo(200);
+        Integer code = (Integer) context.getObject(ScenarioContext.LAST_STATUS_CODE);
+        assertThat(code).isNotNull().isNotEqualTo(200);
         log.info("Попытка закрыть счет завершилась ошибкой");
     }
 
@@ -211,23 +188,10 @@ public class AccountsServer {
         log.info("Баланс счета соответствует: {}", expectedBalance);
     }
 
-    @Тогда("транзакция успешно создана")
-    public void transactionSuccessfullyCreated() {
-        assertThat(topupTransaction).isNotNull();
-        assertThat(topupTransaction.getId()).isNotZero();
-        log.info("Транзакция создана с id: {}", topupTransaction.getId());
-    }
-
     @Тогда("сумма транзакции равна {string}")
     public void transactionAmountEquals(String expectedAmount) {
         assertThat(topupTransaction.getMoney().getAmount()).isEqualTo(expectedAmount);
         log.info("Сумма транзакции соответствует: {}", expectedAmount);
-    }
-
-    @Тогда("тип транзакции {string}")
-    public void transactionTypeEquals(String expectedType) {
-        assertThat(topupTransaction.getType()).isEqualTo(expectedType);
-        log.info("Тип транзакции соответствует: {}", expectedType);
     }
 
     @Тогда("счет успешно закрыт")

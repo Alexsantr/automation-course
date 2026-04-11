@@ -1,22 +1,24 @@
 package api.spec;
 
+import config.DataConfig;
+import io.restassured.builder.RequestSpecBuilder;
 import io.restassured.builder.ResponseSpecBuilder;
 import io.restassured.filter.log.LogDetail;
 import io.restassured.http.ContentType;
 import io.restassured.specification.RequestSpecification;
 import io.restassured.specification.ResponseSpecification;
-
-import static helpers.CustomAllureListener.withCustomTemplates;
-import static io.restassured.RestAssured.with;
+import org.aeonbits.owner.ConfigFactory;
 
 public class BaseSpec {
-    public static RequestSpecification requestSpec =
-            with()
-                    .contentType(ContentType.JSON)
-                    .accept(ContentType.JSON)
-                    .filter(withCustomTemplates())
-                    .log()
-                    .all();
+
+    private static final DataConfig config = ConfigFactory.create(DataConfig.class);
+
+    public static RequestSpecification getRequestSpec() {
+        return new RequestSpecBuilder()
+                .setBaseUri(config.getBaseUrl())
+                .setContentType(ContentType.JSON)
+                .build();
+    }
 
     public static ResponseSpecification statusCode200 =
             new ResponseSpecBuilder()
