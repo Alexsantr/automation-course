@@ -19,30 +19,19 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static utils.ScenarioContext.USER_TOKEN;
+import static utils.ScenarioContext.*;
 
-public class CommonSteps {
+public class CommonSteps extends BaseServer {
     private static final IUserApi userApi = new UserApi();
     private static final Logger log = LoggerFactory.getLogger(CommonSteps.class);
-    private static final IAccountsApi accountsApi=new AccountsApi();
+    private static final IAccountsApi accountsApi = new AccountsApi();
 
-    private final ScenarioContext context;
+
     private UserPublic userResponse;
 
     public CommonSteps(ScenarioContext context) {
-        this.context = context;
-    }
 
-    private void put(String key, String value) {
-        context.put(key, value);
-    }
-
-    private void putObject(String key, Object value) {
-        context.putObject(key, value);
-    }
-
-    private String get(String key) {
-        return context.get(key);
+        super(context);
     }
 
     private Object getObject(String key) {
@@ -53,7 +42,7 @@ public class CommonSteps {
 
     @Тогда("получаем счета по клиенту")
     public void getAcc() {
-        String token = get(ScenarioContext.USER_TOKEN);
+        String token = get(USER_TOKEN);
         List<AccountPublic> accounts = accountsApi.getAccounts(token);
 
         assertThat(accounts).isNotNull();
@@ -65,22 +54,22 @@ public class CommonSteps {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Не найден счет с балансом больше 100"));
 
-        put(ScenarioContext.ACCOUNT_ID, String.valueOf(foundAccount.getId()));
-        put(ScenarioContext.ACCOUNT_BALANCE, foundAccount.getBalance());
+        put(ACCOUNT_ID, String.valueOf(foundAccount.getId()));
+        put(ACCOUNT_BALANCE, foundAccount.getBalance());
 
         log.info("Найден счет с балансом {}: id={}", foundAccount.getBalance(), foundAccount.getId());
     }
 
     @Допустим("у пользователя есть счет с id {string}")
     public void userHasAccountWithId(String accountId) {
-        put(ScenarioContext.ACCOUNT_ID, accountId);
+        put(ACCOUNT_ID, accountId);
         log.info("Сохранен ID счета: {}", accountId);
     }
 
     @Допустим("у пользователя есть счет с id {string} и балансом {string}")
     public void userHasAccountWithIdAndBalance(String accountId, String balance) {
-        put(ScenarioContext.ACCOUNT_ID, accountId);
-        put(ScenarioContext.ACCOUNT_BALANCE, balance);
+        put(ACCOUNT_ID, accountId);
+        put(ACCOUNT_BALANCE, balance);
         log.info("Сохранен счет: id={}, balance={}", accountId, balance);
     }
 
@@ -88,14 +77,14 @@ public class CommonSteps {
 
     @Допустим("пользователь с id {int} существует в системе")
     public void userExistsWithId(int userId) {
-        put(ScenarioContext.USER_ID, String.valueOf(userId));
+        put(USER_ID, String.valueOf(userId));
         log.info("Пользователь с id {} существует в системе", userId);
     }
 
     @Когда("я запрашиваю данные пользователя")
     public void requestUserData() {
         String token = get(USER_TOKEN);
-        String userId = get(ScenarioContext.USER_ID);
+        String userId = get(USER_ID);
 
         if (token == null || token.isEmpty()) {
             userResponse = userApi.getUserByIdPublic(Integer.parseInt(userId));
@@ -103,14 +92,14 @@ public class CommonSteps {
             userResponse = userApi.getUserById(token, Integer.parseInt(userId));
         }
 
-        putObject(ScenarioContext.USER_RESPONSE, userResponse);
+        putObject(USER_RESPONSE, userResponse);
         log.info("Запрошены данные пользователя с id: {}", userId);
     }
 
     @Когда("клиент делает запрос")
     public void clientMakesRequest() {
         String token = get(USER_TOKEN);
-        String userId = get(ScenarioContext.USER_ID);
+        String userId = get(USER_ID);
 
         if (userId != null) {
             if (token != null && !token.isEmpty()) {
@@ -118,7 +107,7 @@ public class CommonSteps {
             } else {
                 userResponse = userApi.getUserByIdPublic(Integer.parseInt(userId));
             }
-            putObject(ScenarioContext.USER_RESPONSE, userResponse);
+            putObject(USER_RESPONSE, userResponse);
         }
 
         log.info("Клиент выполнил запрос");
@@ -126,7 +115,7 @@ public class CommonSteps {
 
     @Тогда("в ответе получаю имя {string}")
     public void receiveFirstName(String expectedFirstName) {
-        UserPublic response = (UserPublic) getObject(ScenarioContext.USER_RESPONSE);
+        UserPublic response = (UserPublic) getObject(USER_RESPONSE);
         assertThat(response).isNotNull();
         assertThat(response.getFirst_name()).isEqualTo(expectedFirstName);
         log.info("Имя пользователя: {}", response.getFirst_name());
@@ -134,7 +123,7 @@ public class CommonSteps {
 
     @Тогда("статус ответа {int}")
     public void checkStatusCode(int expectedStatusCode) {
-        Integer actual = (Integer) getObject(ScenarioContext.LAST_STATUS_CODE);
+        Integer actual = (Integer) getObject(LAST_STATUS_CODE);
         assertThat(actual)
                 .as("HTTP-статус последнего ответа (положите его в контекст через шаги API)")
                 .isNotNull()
@@ -144,20 +133,20 @@ public class CommonSteps {
 
     @Тогда("сообщение об ошибке содержит {string}")
     public void errorMessageContains(String expectedMessage) {
-        ErrorResponse er = (ErrorResponse) getObject(ScenarioContext.ERROR_RESPONSE);
+        ErrorResponse er = (ErrorResponse) getObject(ERROR_RESPONSE);
         if (er != null && er.getDetail() != null) {
             assertThat(er.getDetail()).contains(expectedMessage);
             log.info("Сообщение об ошибке содержит: {}", expectedMessage);
             return;
         }
-        String msg = get(ScenarioContext.LAST_ERROR_MESSAGE);
+        String msg = get(LAST_ERROR_MESSAGE);
         assertThat(msg).as("ожидались ERROR_RESPONSE.detail или LAST_ERROR_MESSAGE").contains(expectedMessage);
         log.info("Сообщение об ошибке содержит: {}", expectedMessage);
     }
 
     @Тогда("транзакция успешно создана")
     public void transactionSuccessfullyCreated() {
-        TransactionPublic tx = (TransactionPublic) getObject(ScenarioContext.LAST_TRANSACTION);
+        TransactionPublic tx = (TransactionPublic) getObject(LAST_TRANSACTION);
         assertThat(tx).isNotNull();
         assertThat(tx.getId()).isNotZero();
         log.info("Транзакция создана с id: {}", tx.getId());
@@ -165,7 +154,7 @@ public class CommonSteps {
 
     @Тогда("тип транзакции {string}")
     public void transactionTypeEquals(String expectedType) {
-        TransactionPublic tx = (TransactionPublic) getObject(ScenarioContext.LAST_TRANSACTION);
+        TransactionPublic tx = (TransactionPublic) getObject(LAST_TRANSACTION);
         assertThat(tx).isNotNull();
         assertThat(tx.getType()).isEqualTo(expectedType);
         assertThat(tx.getStatus()).isEqualTo("COMPLETED");
@@ -175,9 +164,9 @@ public class CommonSteps {
     @Тогда("список транзакций не пустой")
     public void transactionsListNotEmpty() {
         @SuppressWarnings("unchecked")
-        List<TransactionPublic> adminList = (List<TransactionPublic>) getObject(ScenarioContext.USER_TRANSACTIONS);
+        List<TransactionPublic> adminList = (List<TransactionPublic>) getObject(USER_TRANSACTIONS);
         @SuppressWarnings("unchecked")
-        List<TransactionPublic> clientList = (List<TransactionPublic>) getObject(ScenarioContext.TRANSACTIONS_LIST);
+        List<TransactionPublic> clientList = (List<TransactionPublic>) getObject(TRANSACTIONS_LIST);
         boolean adminOk = adminList != null && !adminList.isEmpty();
         boolean clientOk = clientList != null && !clientList.isEmpty();
         assertThat(adminOk || clientOk)
@@ -192,13 +181,13 @@ public class CommonSteps {
 
     @Тогда("чек содержит информацию о транзакции")
     public void receiptContainsTransactionInfo() {
-        String html = get(ScenarioContext.RECEIPT_HTML);
+        String html = get(RECEIPT_HTML);
         if (html != null && !html.isBlank()) {
             assertThat(html).isNotBlank();
             log.info("Чек (HTML) содержит данные");
             return;
         }
-        TransactionPublic tx = (TransactionPublic) getObject(ScenarioContext.LAST_TRANSACTION);
+        TransactionPublic tx = (TransactionPublic) getObject(LAST_TRANSACTION);
         assertThat(tx).as("ожидался RECEIPT_HTML или LAST_TRANSACTION").isNotNull();
         log.info("Проверка транзакции по данным из контекста");
     }

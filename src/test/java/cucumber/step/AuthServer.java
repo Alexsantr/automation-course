@@ -18,39 +18,33 @@ import utils.UserDataGenerator;
 
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static utils.ScenarioContext.*;
 
-public class AuthServer {
+public class AuthServer extends BaseServer {
     private static final IAuthApi authUsr = new AuthApi();
     private static final Logger log = LoggerFactory.getLogger(AuthServer.class);
 
-    private final ScenarioContext context;
+
     private RegisterRequest.RegisterRequestBuilder requestBuilder;
     private RegisterResponse registerResponse;
 
     public AuthServer(ScenarioContext context) {
-        this.context = context;
+        super(context);
     }
 
     /**
      * Один экземпляр на сценарий в {@link ScenarioContext}; закрывается в {@link Hooks#tearDown()}.
      */
     private DatabaseHelper databaseHelper() {
-        Object existing = context.getObject(ScenarioContext.DB_HELPER);
+        Object existing = context.getObject(DB_HELPER);
         if (existing instanceof DatabaseHelper) {
             return (DatabaseHelper) existing;
         }
         DatabaseHelper db = new DatabaseHelper();
-        context.putObject(ScenarioContext.DB_HELPER, db);
+        context.putObject(DB_HELPER, db);
         return db;
     }
 
-    private void put(String key, String value) {
-        context.put(key, value);
-    }
-
-    private String get(String key) {
-        return context.get(key);
-    }
 
     // ==================== НОВЫЕ ШАГИ ДЛЯ РАБОТЫ С БД ====================
 
@@ -59,8 +53,8 @@ public class AuthServer {
         DatabaseHelper.UserCredentials user = databaseHelper().getRandomUser();
         assertThat(user).isNotNull();
 
-        put(ScenarioContext.USER_LOGIN, user.getLogin());
-        put(ScenarioContext.USER_PASSWORD, user.getPassword());
+        put(USER_LOGIN, user.getLogin());
+        put(USER_PASSWORD, user.getPassword());
 
         log.info("Взят случайный пользователь из БД: login={}", user.getLogin());
     }
@@ -70,8 +64,8 @@ public class AuthServer {
         DatabaseHelper.UserCredentials user = databaseHelper().getUserByLogin(login);
         assertThat(user).isNotNull();
 
-        put(ScenarioContext.USER_LOGIN, user.getLogin());
-        put(ScenarioContext.USER_PASSWORD, user.getPassword());
+        put(USER_LOGIN, user.getLogin());
+        put(USER_PASSWORD, user.getPassword());
 
         log.info("Взят пользователь из БД: login={}", user.getLogin());
     }
@@ -81,8 +75,8 @@ public class AuthServer {
         DatabaseHelper.UserCredentials user = databaseHelper().getUserById(userId);
         assertThat(user).isNotNull();
 
-        put(ScenarioContext.USER_LOGIN, user.getLogin());
-        put(ScenarioContext.USER_PASSWORD, user.getPassword());
+        put(USER_LOGIN, user.getLogin());
+        put(USER_PASSWORD, user.getPassword());
 
         log.info("Взят пользователь из БД: id={}, login={}", userId, user.getLogin());
     }
@@ -97,14 +91,14 @@ public class AuthServer {
 
     @Допустим("я авторизуюсь под пользователем из базы данных")
     public void authorizeWithUserFromDatabase() {
-        String login = get(ScenarioContext.USER_LOGIN);
-        String password = get(ScenarioContext.USER_PASSWORD);
+        String login = get(USER_LOGIN);
+        String password = get(USER_PASSWORD);
 
         assertThat(login).isNotNull();
         assertThat(password).isNotNull();
 
         AuthResponse authResponse = authUsr.getAuthUser(new AuthRequest(login, password));
-        put(ScenarioContext.USER_TOKEN, authResponse.getAccess_token());
+        put(USER_TOKEN, authResponse.getAccess_token());
 
         log.info("Авторизован под пользователем из БД: login={}", login);
     }
@@ -140,27 +134,27 @@ public class AuthServer {
     @Затем("запоминаем данные по клиенту")
     public void saveDataUser() {
         RegisterRequest request = requestBuilder.build();
-        put(ScenarioContext.USER_LOGIN, request.getLogin());
-        put(ScenarioContext.USER_PASSWORD, request.getPassword());
+        put(USER_LOGIN, request.getLogin());
+        put(USER_PASSWORD, request.getPassword());
         log.info("Сохранены данные: login={}, password={}",
-                get(ScenarioContext.USER_LOGIN),
-                get(ScenarioContext.USER_PASSWORD));
+                get(USER_LOGIN),
+                get(USER_PASSWORD));
     }
 
     @Затем("клиент авторизуется")
     public void authUser() {
-        String login = get(ScenarioContext.USER_LOGIN);
-        String password = get(ScenarioContext.USER_PASSWORD);
+        String login = get(USER_LOGIN);
+        String password = get(USER_PASSWORD);
 
         AuthResponse authResponse = authUsr.getAuthUser(new AuthRequest(login, password));
 
-        put(ScenarioContext.USER_TOKEN, authResponse.getAccess_token());
+        put(USER_TOKEN, authResponse.getAccess_token());
         log.info("Токен получен и сохранён: {}", authResponse.getAccess_token());
     }
 
     @Тогда("клиент авторизован")
     public void checkAuthUser() {
-        String token = get(ScenarioContext.USER_TOKEN);
+        String token = get(USER_TOKEN);
 
         assertThat(token)
                 .isNotNull()
@@ -170,14 +164,14 @@ public class AuthServer {
 
     @Допустим("пользователь авторизован в системе")
     public void userIsAuthorized() {
-        String token = get(ScenarioContext.USER_TOKEN);
+        String token = get(USER_TOKEN);
         if (token != null && !token.isEmpty()) {
             log.info("Пользователь уже авторизован");
             return;
         }
 
-        String login = get(ScenarioContext.USER_LOGIN);
-        String password = get(ScenarioContext.USER_PASSWORD);
+        String login = get(USER_LOGIN);
+        String password = get(USER_PASSWORD);
 
         if (login == null || password == null) {
             // Если нет данных, берем случайного пользователя из БД
@@ -185,15 +179,15 @@ public class AuthServer {
             if (user != null) {
                 login = user.getLogin();
                 password = user.getPassword();
-                put(ScenarioContext.USER_LOGIN, login);
-                put(ScenarioContext.USER_PASSWORD, password);
+                put(USER_LOGIN, login);
+                put(USER_PASSWORD, password);
             } else {
                 throw new IllegalStateException("Нет доступных пользователей в БД");
             }
         }
 
         AuthResponse authResponse = authUsr.getAuthUser(new AuthRequest(login, password));
-        put(ScenarioContext.USER_TOKEN, authResponse.getAccess_token());
+        put(USER_TOKEN, authResponse.getAccess_token());
         log.info("Пользователь авторизован: login={}", login);
     }
 }

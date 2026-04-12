@@ -8,19 +8,15 @@ import utils.ScenarioContext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class UserServer {
+public class UserServer extends BaseServer {
     private static final Logger log = LoggerFactory.getLogger(UserServer.class);
 
-    private final ScenarioContext context;
     private UserPublic userResponse;
 
     public UserServer(ScenarioContext context) {
-        this.context = context;
+        super(context);
     }
 
-    private Object getObject(String key) {
-        return context.getObject(key);
-    }
 
     @Тогда("в ответе получаю фамилию {string}")
     public void receiveLastName(String expectedLastName) {

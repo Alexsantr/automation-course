@@ -18,13 +18,13 @@ import utils.ScenarioContext;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static utils.ScenarioContext.*;
 
-public class TransfersServer {
+public class TransfersServer extends BaseServer {
     private static final ITransfersApi transfersApi = new TransfersApi();
     private static final IAccountsApi accountsApi = new AccountsApi();
     private static final Logger log = LoggerFactory.getLogger(TransfersServer.class);
 
-    private final ScenarioContext context;
     private TransactionPublic transferTransaction;
     private TransferByAccountCheckResponse accountCheckResponse;
     private ExchangeRatesResponse exchangeRates;
@@ -32,100 +32,89 @@ public class TransfersServer {
     private String toAccountBalanceBefore;
 
     public TransfersServer(ScenarioContext context) {
-        this.context = context;
-    }
-
-    private void put(String key, String value) {
-        context.put(key, value);
-    }
-
-    private void putObject(String key, Object value) {
-        context.putObject(key, value);
+        super(context);
     }
 
     private void rememberHttpStatus(int code) {
-        context.putObject(ScenarioContext.LAST_STATUS_CODE, code);
+        context.putObject(LAST_STATUS_CODE, code);
     }
 
     private void rememberTransaction(TransactionPublic tx) {
         this.transferTransaction = tx;
         if (tx != null) {
-            putObject(ScenarioContext.LAST_TRANSACTION, tx);
+            putObject(LAST_TRANSACTION, tx);
         }
     }
 
     private void rememberError(Exception e) {
         ErrorResponse er = new ErrorResponse();
         er.setDetail(e.getMessage());
-        putObject(ScenarioContext.ERROR_RESPONSE, er);
+        putObject(ERROR_RESPONSE, er);
     }
 
-    private String get(String key) {
-        return context.get(key);
-    }
 
     // ==================== ШАГИ ДЛЯ ПЕРЕВОДОВ ====================
     // «пользователь авторизован в системе» — шаг из AuthServer
 
     @Допустим("у пользователя есть счет отправителя с id {string} и балансом {string}")
     public void userHasFromAccountWithIdAndBalance(String accountId, String balance) {
-        put(ScenarioContext.FROM_ACCOUNT_ID, accountId);
-        put(ScenarioContext.FROM_ACCOUNT_BALANCE, balance);
+        put(FROM_ACCOUNT_ID, accountId);
+        put(FROM_ACCOUNT_BALANCE, balance);
         fromAccountBalanceBefore = balance;
         log.info("Счет отправителя: id={}, balance={}", accountId, balance);
     }
 
     @Допустим("у пользователя есть счет получателя с id {string}")
     public void userHasToAccount(String accountId) {
-        put(ScenarioContext.TO_ACCOUNT_ID, accountId);
+        put(TO_ACCOUNT_ID, accountId);
         log.info("Счет получателя: id={}", accountId);
     }
 
     @Допустим("существует счет с номером {string}")
     public void accountExistsWithNumber(String accountNumber) {
-        put(ScenarioContext.TARGET_ACCOUNT_NUMBER, accountNumber);
+        put(TARGET_ACCOUNT_NUMBER, accountNumber);
         log.info("Существует счет с номером: {}", accountNumber);
     }
 
     @Допустим("существует получатель с телефоном {string} в нашем банке")
     public void recipientExistsWithPhoneInOurBank(String phone) {
-        put(ScenarioContext.RECIPIENT_PHONE, phone);
-        put(ScenarioContext.RECIPIENT_IN_OUR_BANK, "true");
+        put(RECIPIENT_PHONE, phone);
+        put(RECIPIENT_IN_OUR_BANK, "true");
         log.info("Получатель с телефоном {} существует в нашем банке", phone);
     }
 
     @Допустим("у пользователя есть RUB счет с id {string} и балансом {string}")
     public void userHasRubAccountWithIdAndBalance(String accountId, String balance) {
-        put(ScenarioContext.FROM_ACCOUNT_ID, accountId);
-        put(ScenarioContext.FROM_ACCOUNT_BALANCE, balance);
+        put(FROM_ACCOUNT_ID, accountId);
+        put(FROM_ACCOUNT_BALANCE, balance);
         fromAccountBalanceBefore = balance;
         log.info("RUB счет: id={}, balance={}", accountId, balance);
     }
 
     @Допустим("у пользователя есть USD счет с id {string} и балансом {string}")
     public void userHasUsdAccountWithIdAndBalance(String accountId, String balance) {
-        put(ScenarioContext.TO_ACCOUNT_ID, accountId);
-        put(ScenarioContext.TO_ACCOUNT_BALANCE, balance);
+        put(TO_ACCOUNT_ID, accountId);
+        put(TO_ACCOUNT_BALANCE, balance);
         toAccountBalanceBefore = balance;
         log.info("USD счет: id={}, balance={}", accountId, balance);
     }
 
     @Допустим("пользователь уже перевел {string} сегодня")
     public void userAlreadyTransferredToday(String amount) {
-        put(ScenarioContext.DAILY_TRANSFERRED_AMOUNT, amount);
+        put(DAILY_TRANSFERRED_AMOUNT, amount);
         log.info("Пользователь уже перевел {} сегодня", amount);
     }
 
     @Когда("клиент переводит {string} со счета {string} на счет {string}")
     public void transferBetweenOwnAccounts(String amount, String fromAccountId, String toAccountId) {
-        String token = get(ScenarioContext.USER_TOKEN);
+        String token = get(USER_TOKEN);
 
         try {
             TransferCreateRequest request = TransferCreateRequest.builder()
                     .from_account_id(Integer.parseInt(fromAccountId))
                     .to_account_id(Integer.parseInt(toAccountId))
                     .amount(amount)
-                    .otp_code(get(ScenarioContext.OTP_CODE))
+                    .otp_code(get(OTP_CODE))
                     .build();
 
             rememberTransaction(transfersApi.createTransfer(token, request));
@@ -140,7 +129,7 @@ public class TransfersServer {
 
     @Когда("клиент проверяет счет по номеру {string}")
     public void checkAccountByNumber(String accountNumber) {
-        String token = get(ScenarioContext.USER_TOKEN);
+        String token = get(USER_TOKEN);
         accountCheckResponse = transfersApi.checkAccountByNumber(token, accountNumber);
         rememberHttpStatus(200);
         log.info("Проверен счет: {}", accountNumber);
@@ -148,16 +137,16 @@ public class TransfersServer {
 
     @Когда("клиент переводит {string} по номеру телефона {string}")
     public void transferByPhone(String amount, String phone) {
-        String token = get(ScenarioContext.USER_TOKEN);
-        String fromAccountId = get(ScenarioContext.FROM_ACCOUNT_ID);
+        String token = get(USER_TOKEN);
+        String fromAccountId = get(FROM_ACCOUNT_ID);
 
         try {
             TransferByPhoneRequest request = TransferByPhoneRequest.builder()
                     .from_account_id(Integer.parseInt(fromAccountId))
                     .phone(phone)
                     .amount(amount)
-                    .recipient_bank_id(get(ScenarioContext.RECIPIENT_BANK_ID))
-                    .otp_code(get(ScenarioContext.OTP_CODE))
+                    .recipient_bank_id(get(RECIPIENT_BANK_ID))
+                    .otp_code(get(OTP_CODE))
                     .build();
 
             rememberTransaction(transfersApi.createTransferByPhone(token, request));
@@ -172,7 +161,7 @@ public class TransfersServer {
 
     @Когда("клиент запрашивает текущие курсы валют")
     public void requestExchangeRates() {
-        String token = get(ScenarioContext.USER_TOKEN);
+        String token = get(USER_TOKEN);
         exchangeRates = transfersApi.getExchangeRates(token);
         rememberHttpStatus(200);
         log.info("Получены курсы валют");
@@ -180,16 +169,16 @@ public class TransfersServer {
 
     @Когда("клиент обменивает {string} RUB на USD")
     public void exchangeRubToUsd(String amount) {
-        String token = get(ScenarioContext.USER_TOKEN);
-        String fromAccountId = get(ScenarioContext.FROM_ACCOUNT_ID);
-        String toAccountId = get(ScenarioContext.TO_ACCOUNT_ID);
+        String token = get(USER_TOKEN);
+        String fromAccountId = get(FROM_ACCOUNT_ID);
+        String toAccountId = get(TO_ACCOUNT_ID);
 
         try {
             ExchangeRequest request = ExchangeRequest.builder()
                     .from_account_id(Integer.parseInt(fromAccountId))
                     .to_account_id(Integer.parseInt(toAccountId))
                     .amount(amount)
-                    .otp_code(get(ScenarioContext.OTP_CODE))
+                    .otp_code(get(OTP_CODE))
                     .build();
 
             rememberTransaction(transfersApi.exchangeCurrency(token, request));
@@ -204,16 +193,16 @@ public class TransfersServer {
 
     @Когда("клиент пытается перевести {string}")
     public void clientTriesToTransfer(String amount) {
-        String token = get(ScenarioContext.USER_TOKEN);
-        String fromAccountId = get(ScenarioContext.FROM_ACCOUNT_ID);
-        String toAccountId = get(ScenarioContext.TO_ACCOUNT_ID);
+        String token = get(USER_TOKEN);
+        String fromAccountId = get(FROM_ACCOUNT_ID);
+        String toAccountId = get(TO_ACCOUNT_ID);
 
         try {
             TransferCreateRequest request = TransferCreateRequest.builder()
                     .from_account_id(Integer.parseInt(fromAccountId))
                     .to_account_id(Integer.parseInt(toAccountId))
                     .amount(amount)
-                    .otp_code(get(ScenarioContext.OTP_CODE))
+                    .otp_code(get(OTP_CODE))
                     .build();
 
             rememberTransaction(transfersApi.createTransfer(token, request));
@@ -229,8 +218,8 @@ public class TransfersServer {
 
     @Тогда("баланс счета отправителя уменьшился на {string}")
     public void fromAccountBalanceDecreasedBy(String expectedDecrease) {
-        String token = get(ScenarioContext.USER_TOKEN);
-        String fromAccountId = get(ScenarioContext.FROM_ACCOUNT_ID);
+        String token = get(USER_TOKEN);
+        String fromAccountId = get(FROM_ACCOUNT_ID);
 
         AccountPublic currentAccount = accountsApi.getAccountById(token, Integer.parseInt(fromAccountId));
         String currentBalance = currentAccount.getBalance();
@@ -247,14 +236,14 @@ public class TransfersServer {
 
     @Тогда("баланс счета получателя увеличился на {string}")
     public void toAccountBalanceIncreasedBy(String expectedIncrease) {
-        String token = get(ScenarioContext.USER_TOKEN);
-        String toAccountId = get(ScenarioContext.TO_ACCOUNT_ID);
+        String token = get(USER_TOKEN);
+        String toAccountId = get(TO_ACCOUNT_ID);
 
         AccountPublic currentAccount = accountsApi.getAccountById(token, Integer.parseInt(toAccountId));
         String currentBalance = currentAccount.getBalance();
 
         // Получаем баланс до операции (если не сохранен, берем из контекста)
-        String balanceBefore = get(ScenarioContext.TO_ACCOUNT_BALANCE);
+        String balanceBefore = get(TO_ACCOUNT_BALANCE);
         if (balanceBefore == null) {
             balanceBefore = "0";
         }
@@ -334,8 +323,8 @@ public class TransfersServer {
 
     @Тогда("USD счет увеличился на сумму по курсу")
     public void usdAccountIncreasedByExchangeRate() {
-        String token = get(ScenarioContext.USER_TOKEN);
-        String toAccountId = get(ScenarioContext.TO_ACCOUNT_ID);
+        String token = get(USER_TOKEN);
+        String toAccountId = get(TO_ACCOUNT_ID);
 
         AccountPublic currentAccount = accountsApi.getAccountById(token, Integer.parseInt(toAccountId));
         String currentBalance = currentAccount.getBalance();

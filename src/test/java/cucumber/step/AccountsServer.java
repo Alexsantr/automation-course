@@ -2,6 +2,7 @@ package cucumber.step;
 
 import api.accounts.AccountsApi;
 import api.accounts.IAccountsApi;
+import helpers.TestConstants;
 import io.cucumber.java.ru.Когда;
 import io.cucumber.java.ru.Тогда;
 import model.account.*;
@@ -15,43 +16,37 @@ import java.util.List;
 
 import static java.lang.Integer.parseInt;
 import static org.assertj.core.api.Assertions.assertThat;
+import static utils.ScenarioContext.*;
+import static utils.ScenarioContext.USER_TOKEN;
 
-public class AccountsServer {
+public class AccountsServer extends BaseServer {
     private static final IAccountsApi accountsApi = new AccountsApi();
     private static final Logger log = LoggerFactory.getLogger(AccountsServer.class);
 
-    private final ScenarioContext context;
+
     private List<AccountPublic> accountsList;
     private AccountPublic createdAccount;
     private TransactionPublic topupTransaction;
     private String actionResponse;
 
     public AccountsServer(ScenarioContext context) {
-        this.context = context;
-    }
-
-    private void put(String key, String value) {
-        context.put(key, value);
-    }
-
-    private String get(String key) {
-        return context.get(key);
+        super(context);
     }
 
     private void rememberHttpStatus(int code) {
-        context.putObject(ScenarioContext.LAST_STATUS_CODE, code);
+        context.putObject(LAST_STATUS_CODE, code);
     }
 
     @Когда("клиент запрашивает список своих счетов")
     public void requestAccountsList() {
-        String token = get(ScenarioContext.USER_TOKEN);
+        String token = get(USER_TOKEN);
         accountsList = accountsApi.getAccounts(token);
         log.info("Получен список счетов, количество: {}", accountsList.size());
     }
 
     @Когда("клиент открывает новый счет типа {string} с валютой {string}")
     public void openNewAccount(String accountType, String currency) {
-        String token = get(ScenarioContext.USER_TOKEN);
+        String token = get(USER_TOKEN);
 
         AccountCreateRequest request = AccountCreateRequest.builder()
                 .account_type(AccountType.valueOf(accountType))
@@ -59,7 +54,7 @@ public class AccountsServer {
                 .build();
 
         createdAccount = accountsApi.createAccount(token, request);
-        put(ScenarioContext.ACCOUNT_ID, String.valueOf(createdAccount.getId()));
+        put(ACCOUNT_ID, String.valueOf(createdAccount.getId()));
         rememberHttpStatus(201);
         log.info("Создан новый счет: id={}, type={}, currency={}",
                 createdAccount.getId(), accountType, currency);
@@ -67,24 +62,24 @@ public class AccountsServer {
 
     @Когда("клиент пополняет счет на сумму {string}")
     public void topUpAccount(String amount) {
-        String token = get(ScenarioContext.USER_TOKEN);
-        String accountId = get(ScenarioContext.ACCOUNT_ID);
+        String token = get(USER_TOKEN);
+        String accountId = get(ACCOUNT_ID);
 
         AccountTopupRequest request = AccountTopupRequest.builder()
                 .amount(amount)
-                .otp_code(get(ScenarioContext.OTP_CODE))
+                .otp_code(get(OTP_CODE))
                 .build();
 
         topupTransaction = accountsApi.topUpAccount(token, Integer.parseInt(accountId), request);
         rememberHttpStatus(201);
-        context.putObject(ScenarioContext.LAST_TRANSACTION, topupTransaction);
+        context.putObject(LAST_TRANSACTION, topupTransaction);
         log.info("Счет {} пополнен на сумму {}", accountId, amount);
     }
 
     @Когда("клиент закрывает счет")
     public void closeAccount() {
-        String token = get(ScenarioContext.USER_TOKEN);
-        String accountId = get(ScenarioContext.ACCOUNT_ID);
+        String token = get(USER_TOKEN);
+        String accountId = get(ACCOUNT_ID);
 
         try {
             actionResponse = accountsApi.closeAccount(token, parseInt(accountId));
@@ -99,8 +94,8 @@ public class AccountsServer {
 
     @Когда("клиент пытается закрыть счет")
     public void clientTriesToCloseAccount() {
-        String token = get(ScenarioContext.USER_TOKEN);
-        String accountId = get(ScenarioContext.ACCOUNT_ID);
+        String token = get(USER_TOKEN);
+        String accountId = get(ACCOUNT_ID);
 
         try {
             // Пытаемся закрыть счет, но ожидаем ошибку
@@ -112,7 +107,7 @@ public class AccountsServer {
             // ← для хранения ошибки
             ErrorResponse errorResponse = new ErrorResponse();
             errorResponse.setDetail(e.getMessage());
-            context.putObject(ScenarioContext.ERROR_RESPONSE, errorResponse);
+            context.putObject(ERROR_RESPONSE, errorResponse);
             log.info("Ожидаемая ошибка при закрытии счета: {}", e.getMessage());
         }
     }
@@ -124,21 +119,21 @@ public class AccountsServer {
 
     @Тогда("регистрация должна завершиться ошибкой с кодом {int}")
     public void registrationShouldFailWithStatusCode(int expectedStatusCode) {
-        Integer code = (Integer) context.getObject(ScenarioContext.LAST_STATUS_CODE);
+        Integer code = (Integer) context.getObject(LAST_STATUS_CODE);
         assertThat(code).isEqualTo(expectedStatusCode);
         log.info("Регистрация завершилась ошибкой с кодом: {}", expectedStatusCode);
     }
 
     @Тогда("авторизация должна завершиться ошибкой с кодом {int}")
     public void authorizationShouldFailWithStatusCode(int expectedStatusCode) {
-        Integer code = (Integer) context.getObject(ScenarioContext.LAST_STATUS_CODE);
+        Integer code = (Integer) context.getObject(LAST_STATUS_CODE);
         assertThat(code).isEqualTo(expectedStatusCode);
         log.info("Авторизация завершилась ошибкой с кодом: {}", expectedStatusCode);
     }
 
     @Тогда("попытка закрыть счет должна завершиться ошибкой")
     public void closeAccountShouldFail() {
-        Integer code = (Integer) context.getObject(ScenarioContext.LAST_STATUS_CODE);
+        Integer code = (Integer) context.getObject(LAST_STATUS_CODE);
         assertThat(code).isNotNull().isNotEqualTo(200);
         log.info("Попытка закрыть счет завершилась ошибкой");
     }
