@@ -1,28 +1,30 @@
 package utils;
 
+import config.DataConfig;
+import org.aeonbits.owner.ConfigFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class DatabaseHelper {
-    private static final String DB_URL = "jdbc:postgresql://155.212.170.64:5432/shlapabank";
-    private static final String DB_USER = "shlapabank";
-    private static final String DB_PASSWORD = "shlapabank";
+    private static final Logger log = LoggerFactory.getLogger(DatabaseHelper.class);
 
-    private Connection connection;
+    private final Connection connection;
 
     public DatabaseHelper() {
+        DataConfig config = ConfigFactory.create(DataConfig.class);
         try {
-            // Загружаем драйвер PostgreSQL
-            Class.forName("org.postgresql.Driver");
-            // Устанавливаем соединение
-            connection = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-            System.out.println("Database connection established successfully!");
-        } catch (ClassNotFoundException e) {
-            System.err.println("PostgreSQL JDBC Driver not found!");
-            throw new RuntimeException("PostgreSQL JDBC Driver not found!", e);
+            connection = DriverManager.getConnection(
+                    config.getDbUrl(),
+                    config.getDbUser(),
+                    config.getDbPassword()
+            );
+            log.info("Database connection established");
         } catch (SQLException e) {
-            System.err.println("Failed to connect to database!");
+            log.error("Failed to connect to database", e);
             throw new RuntimeException("Failed to connect to database!", e);
         }
     }
@@ -39,7 +41,7 @@ public class DatabaseHelper {
                 );
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("getRandomUser failed", e);
         }
         return null;
     }
@@ -57,7 +59,7 @@ public class DatabaseHelper {
                 );
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("getUserByLogin failed", e);
         }
         return null;
     }
@@ -75,7 +77,7 @@ public class DatabaseHelper {
                 );
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("getUserById failed", e);
         }
         return null;
     }
@@ -93,7 +95,7 @@ public class DatabaseHelper {
                 ));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("getAllUsers failed", e);
         }
         return users;
     }
@@ -108,7 +110,7 @@ public class DatabaseHelper {
                 return rs.getInt(1) > 0;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.error("userExists failed", e);
         }
         return false;
     }
@@ -118,10 +120,10 @@ public class DatabaseHelper {
         try {
             if (connection != null && !connection.isClosed()) {
                 connection.close();
-                System.out.println("Database connection closed.");
+                log.info("Database connection closed");
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            log.warn("Error closing database connection", e);
         }
     }
 

@@ -12,8 +12,10 @@ import model.auth.RegisterRequest;
 import model.auth.RegisterResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import utils.DatabaseHelper;
 import utils.ScenarioContext;
 import utils.UserDataGenerator;
+
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,6 +31,19 @@ public class AuthServer {
         this.context = context;
     }
 
+    /**
+     * Один экземпляр на сценарий в {@link ScenarioContext}; закрывается в {@link Hooks#tearDown()}.
+     */
+    private DatabaseHelper databaseHelper() {
+        Object existing = context.getObject(ScenarioContext.DB_HELPER);
+        if (existing instanceof DatabaseHelper) {
+            return (DatabaseHelper) existing;
+        }
+        DatabaseHelper db = new DatabaseHelper();
+        context.putObject(ScenarioContext.DB_HELPER, db);
+        return db;
+    }
+
     private void put(String key, String value) {
         context.put(key, value);
     }
@@ -37,55 +52,61 @@ public class AuthServer {
         return context.get(key);
     }
 
-    // ==================== НОВЫЕ ШАГИ ====================
+    // ==================== НОВЫЕ ШАГИ ДЛЯ РАБОТЫ С БД ====================
 
-    @Допустим("пользователь авторизован в системе")
-    public void userIsAuthorized() {
-        String token = get(ScenarioContext.USER_TOKEN);
-        if (token != null && !token.isEmpty()) {
-            log.info("Пользователь уже авторизован, токен: {}", token);
-            return;
-        }
+    @Допустим("я беру случайного пользователя из базы данных")
+    public void takeRandomUserFromDatabase() {
+        DatabaseHelper.UserCredentials user = databaseHelper().getRandomUser();
+        assertThat(user).isNotNull();
 
+        put(ScenarioContext.USER_LOGIN, user.getLogin());
+        put(ScenarioContext.USER_PASSWORD, user.getPassword());
+
+        log.info("Взят случайный пользователь из БД: login={}", user.getLogin());
+    }
+
+    @Допустим("я беру пользователя с логином {string} из базы данных")
+    public void takeUserByLoginFromDatabase(String login) {
+        DatabaseHelper.UserCredentials user = databaseHelper().getUserByLogin(login);
+        assertThat(user).isNotNull();
+
+        put(ScenarioContext.USER_LOGIN, user.getLogin());
+        put(ScenarioContext.USER_PASSWORD, user.getPassword());
+
+        log.info("Взят пользователь из БД: login={}", user.getLogin());
+    }
+
+    @Допустим("я беру пользователя с id {int} из базы данных")
+    public void takeUserByIdFromDatabase(int userId) {
+        DatabaseHelper.UserCredentials user = databaseHelper().getUserById(userId);
+        assertThat(user).isNotNull();
+
+        put(ScenarioContext.USER_LOGIN, user.getLogin());
+        put(ScenarioContext.USER_PASSWORD, user.getPassword());
+
+        log.info("Взят пользователь из БД: id={}, login={}", userId, user.getLogin());
+    }
+
+    @Допустим("пользователь с логином {string} существует в базе данных")
+    public void userExistsInDatabase(String login) {
+        DatabaseHelper.UserCredentials user = databaseHelper().getUserByLogin(login);
+        assertThat(user).isNotNull();
+        assertThat(user.getLogin()).isEqualTo(login);
+        log.info("Пользователь с логином {} существует в БД", login);
+    }
+
+    @Допустим("я авторизуюсь под пользователем из базы данных")
+    public void authorizeWithUserFromDatabase() {
         String login = get(ScenarioContext.USER_LOGIN);
         String password = get(ScenarioContext.USER_PASSWORD);
 
-        if (login == null || password == null) {
-            // Создаем нового пользователя
-            String newLogin = UserDataGenerator.generateLogin();
-            String newPassword = UserDataGenerator.generatePassword();
+        assertThat(login).isNotNull();
+        assertThat(password).isNotNull();
 
-            RegisterRequest registerRequest = RegisterRequest.builder()
-                    .login(newLogin)
-                    .password(newPassword)
-                    .build();
-
-            registerResponse = authUsr.authUser(registerRequest);
-
-            AuthResponse authResponse = authUsr.getAuthUser(new AuthRequest(newLogin, newPassword));
-
-            put(ScenarioContext.USER_LOGIN, newLogin);
-            put(ScenarioContext.USER_PASSWORD, newPassword);
-            put(ScenarioContext.USER_TOKEN, authResponse.getAccess_token());
-
-            log.info("Создан и авторизован новый пользователь: login={}", newLogin);
-        } else {
-            AuthResponse authResponse = authUsr.getAuthUser(new AuthRequest(login, password));
-            put(ScenarioContext.USER_TOKEN, authResponse.getAccess_token());
-            log.info("Пользователь авторизован: login={}", login);
-        }
-    }
-
-    @Допустим("администратор авторизован в системе")
-    public void adminIsAuthorized() {
-        String adminLogin = "admin";
-        String adminPassword = "admin";
-
-        AuthResponse authResponse = authUsr.getAuthUser(new AuthRequest(adminLogin, adminPassword));
-        put(ScenarioContext.ADMIN_TOKEN, authResponse.getAccess_token());
+        AuthResponse authResponse = authUsr.getAuthUser(new AuthRequest(login, password));
         put(ScenarioContext.USER_TOKEN, authResponse.getAccess_token());
 
-        log.info("Администратор авторизован: login={}", adminLogin);
+        log.info("Авторизован под пользователем из БД: login={}", login);
     }
 
     // ==================== СУЩЕСТВУЮЩИЕ ШАГИ ====================
@@ -147,10 +168,32 @@ public class AuthServer {
         log.info("Проверка пройдена, токен валиден: {}", token);
     }
 
-    @Тогда("токен доступа не должен быть пустым")
-    public void tokenShouldNotBeEmpty() {
+    @Допустим("пользователь авторизован в системе")
+    public void userIsAuthorized() {
         String token = get(ScenarioContext.USER_TOKEN);
-        assertThat(token).isNotNull().isNotBlank();
-        log.info("Токен не пустой");
+        if (token != null && !token.isEmpty()) {
+            log.info("Пользователь уже авторизован");
+            return;
+        }
+
+        String login = get(ScenarioContext.USER_LOGIN);
+        String password = get(ScenarioContext.USER_PASSWORD);
+
+        if (login == null || password == null) {
+            // Если нет данных, берем случайного пользователя из БД
+            DatabaseHelper.UserCredentials user = databaseHelper().getRandomUser();
+            if (user != null) {
+                login = user.getLogin();
+                password = user.getPassword();
+                put(ScenarioContext.USER_LOGIN, login);
+                put(ScenarioContext.USER_PASSWORD, password);
+            } else {
+                throw new IllegalStateException("Нет доступных пользователей в БД");
+            }
+        }
+
+        AuthResponse authResponse = authUsr.getAuthUser(new AuthRequest(login, password));
+        put(ScenarioContext.USER_TOKEN, authResponse.getAccess_token());
+        log.info("Пользователь авторизован: login={}", login);
     }
 }
