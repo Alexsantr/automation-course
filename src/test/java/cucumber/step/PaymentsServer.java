@@ -15,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.ScenarioContext;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -42,9 +41,7 @@ public class PaymentsServer extends BaseServer {
         context.putObject(LAST_STATUS_CODE, code);
     }
 
-    private Object getObject(String key) {
-        return context.getObject(key);
-    }
+
 
     // ==================== ШАГИ ДЛЯ ПЛАТЕЖЕЙ ====================
 

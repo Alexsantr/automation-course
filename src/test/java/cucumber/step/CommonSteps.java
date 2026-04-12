@@ -34,9 +34,6 @@ public class CommonSteps extends BaseServer {
         super(context);
     }
 
-    private Object getObject(String key) {
-        return context.getObject(key);
-    }
 
     // ==================== Общие предусловия (без дубликатов в *Server) ====================
 

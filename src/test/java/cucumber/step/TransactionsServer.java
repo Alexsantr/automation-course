@@ -28,9 +28,7 @@ public class TransactionsServer extends BaseServer {
         super(context);
     }
 
-    private Object getObject(String key) {
-        return context.getObject(key);
-    }
+
 
     private void rememberHttpStatus(int code) {
         this.lastStatusCode = code;
