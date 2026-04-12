@@ -1,9 +1,6 @@
 plugins {
     id 'java'
-    id 'java-library'
-    id 'io.freefair.lombok' version '8.4'
-    id 'io.qameta.allure' version '2.11.2'
-    id 'com.github.ben-manes.versions' version '0.48.0'
+    id 'io.qameta.allure' version '2.12.0'
 }
 
 group = 'com.shlapabank'
@@ -16,42 +13,40 @@ java {
 
 repositories {
     mavenCentral()
-    maven { url = 'https://repo.maven.apache.org/maven2' }
 }
 
 ext {
-    allureVersion = '2.25.0'
-    cucumberVersion = '7.15.0'
+    allureVersion    = '2.25.0'
+    cucumberVersion  = '7.15.0'
     restAssuredVersion = '5.4.0'
-    selenideVersion = '6.19.1'
-    junitVersion = '5.10.2'
-    ownerVersion = '1.0.12'
+    selenideVersion  = '6.19.1'
+    junitVersion     = '5.10.2'
+    ownerVersion     = '1.0.12'
     postgresqlVersion = '42.7.1'
-    lombokVersion = '1.18.30'
-    assertjVersion = '3.24.2'
-    slf4jVersion = '2.0.7'
-}
-
-configurations {
-    testImplementation.extendsFrom compileOnly
+    lombokVersion    = '1.18.30'
+    assertjVersion   = '3.24.2'
+    slf4jVersion     = '2.0.7'
 }
 
 dependencies {
-    // REST API Testing
+    // REST API
     testImplementation "io.rest-assured:rest-assured:${restAssuredVersion}"
     testImplementation "io.rest-assured:json-path:${restAssuredVersion}"
     testImplementation "io.rest-assured:xml-path:${restAssuredVersion}"
     testImplementation "io.rest-assured:json-schema-validator:${restAssuredVersion}"
 
-    // UI Testing
+    // UI
     testImplementation "com.codeborne:selenide:${selenideVersion}"
+
+    // Mobile
+    testImplementation 'io.appium:java-client:8.6.0'
 
     // Cucumber
     testImplementation "io.cucumber:cucumber-java:${cucumberVersion}"
     testImplementation "io.cucumber:cucumber-junit-platform-engine:${cucumberVersion}"
     testImplementation "io.cucumber:cucumber-picocontainer:${cucumberVersion}"
 
-    // JUnit
+    // JUnit 5
     testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
     testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
@@ -59,15 +54,14 @@ dependencies {
     testImplementation "org.junit.platform:junit-platform-launcher:1.10.2"
 
     // Allure
-    testImplementation "io.qameta.allure:allure-junit5:${allureVersion}"
+    testImplementation "io.qameta.allure:allure-cucumber7-jvm:${allureVersion}"
     testImplementation "io.qameta.allure:allure-rest-assured:${allureVersion}"
     testImplementation "io.qameta.allure:allure-selenide:${allureVersion}"
 
     // Assertions
     testImplementation "org.assertj:assertj-core:${assertjVersion}"
-    testImplementation "org.hamcrest:hamcrest:2.2"
 
-    // Configuration
+    // Config
     testImplementation "org.aeonbits.owner:owner:${ownerVersion}"
 
     // Database
@@ -75,28 +69,46 @@ dependencies {
 
     // Logging
     testImplementation "org.slf4j:slf4j-api:${slf4jVersion}"
-    testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+    testRuntimeOnly   "org.slf4j:slf4j-simple:${slf4jVersion}"
 
     // Lombok
-    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    compileOnly         "org.projectlombok:lombok:${lombokVersion}"
     annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
-    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+    testCompileOnly         "org.projectlombok:lombok:${lombokVersion}"
     testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
-
-    // Appium (for mobile testing)
-    testImplementation 'io.appium:java-client:8.6.0'
 }
 
-test {
+// Общие настройки для ВСЕХ тестовых тасков
+tasks.withType(Test) {
     useJUnitPlatform()
+    systemProperty "file.encoding", "UTF-8"
+    systemProperty "user.timezone", "UTC"
     systemProperty "cucumber.junit-platform.naming-strategy", "long"
-    systemProperty "env", System.getProperty("env", "local")
     systemProperty "allure.results.directory", "build/allure-results"
 
     testLogging {
         events "passed", "skipped", "failed"
         exceptionFormat "full"
     }
+}
+
+test {
+    systemProperty "env", System.getProperty("env", "local")
+}
+
+task smokeTest(type: Test) {
+    systemProperty "env", System.getProperty("env", "ci")
+    systemProperty "cucumber.filter.tags", "@Smoke"
+}
+
+task regressionTest(type: Test) {
+    systemProperty "env", System.getProperty("env", "ci")
+    systemProperty "cucumber.filter.tags", "@Regression"
+}
+
+task apiTest(type: Test) {
+    systemProperty "env", System.getProperty("env", "ci")
+    systemProperty "cucumber.filter.tags", "@API"
 }
 
 allure {
@@ -118,30 +130,7 @@ tasks.withType(JavaCompile) {
     options.compilerArgs << '-parameters'
 }
 
-tasks.withType(Test) {
-    systemProperty "file.encoding", "UTF-8"
-    systemProperty "user.timezone", "UTC"
-}
-
-task smokeTest(type: Test) {
-    useJUnitPlatform()
-    systemProperty "cucumber.filter.tags", "@Smoke"
-    systemProperty "env", System.getProperty("env", "ci")
-}
-
-task regressionTest(type: Test) {
-    useJUnitPlatform()
-    systemProperty "cucumber.filter.tags", "@Regression"
-    systemProperty "env", System.getProperty("env", "ci")
-}
-
-task apiTest(type: Test) {
-    useJUnitPlatform()
-    systemProperty "cucumber.filter.tags", "@API"
-    systemProperty "env", System.getProperty("env", "ci")
-}
-
 wrapper {
-    gradleVersion = '7.4'
+    gradleVersion = '8.5'
     distributionType = Wrapper.DistributionType.ALL
 }
