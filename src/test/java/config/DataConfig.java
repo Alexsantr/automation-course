@@ -31,4 +31,13 @@ public interface DataConfig extends Config {
 
     @Key("remoteUrl")
     String remoteUrl();
+
+    @Key("db.url")
+    String getDbUrl();
+
+    @Key("db.user")
+    String getDbUser();
+
+    @Key("db.password")
+    String getDbPassword();
 }

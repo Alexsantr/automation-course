@@ -46,6 +46,9 @@ public class ScenarioContext {
     public static final String TRANSACTIONS_LIST = "TRANSACTIONS_LIST";
     public static final String RECEIPT_HTML = "RECEIPT_HTML";
 
+    /** Ключ для {@link utils.DatabaseHelper} в objectData; закрывается в {@code Hooks}. */
+    public static final String DB_HELPER = "dbHelper";
+
     // Common
     public static final String LAST_STATUS_CODE = "LAST_STATUS_CODE";
     public static final String LAST_ERROR_MESSAGE = "LAST_ERROR_MESSAGE";

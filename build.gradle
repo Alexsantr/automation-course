@@ -1,79 +1,147 @@
 plugins {
     id 'java'
+    id 'java-library'
+    id 'io.freefair.lombok' version '8.4'
     id 'io.qameta.allure' version '2.11.2'
+    id 'com.github.ben-manes.versions' version '0.48.0'
 }
 
-group = 'trek'
-version = '1.0-SNAPSHOT'
+group = 'com.shlapabank'
+version = '1.0.0'
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
     mavenCentral()
+    maven { url = 'https://repo.maven.apache.org/maven2' }
 }
 
-def selenideVersion = "6.19.1"
-def restAssuredVersion = "5.4.0"
-def allureVersion = "2.25.0"
-def junitVersion = "5.10.2"
-def cucumberVersion = "7.15.0"
-def ownerVersion = "1.0.12"
+ext {
+    allureVersion = '2.25.0'
+    cucumberVersion = '7.15.0'
+    restAssuredVersion = '5.4.0'
+    selenideVersion = '6.19.1'
+    junitVersion = '5.10.2'
+    ownerVersion = '1.0.12'
+    postgresqlVersion = '42.7.1'
+    lombokVersion = '1.18.30'
+    assertjVersion = '3.24.2'
+    slf4jVersion = '2.0.7'
+}
 
-allure {
-    adapter {
-        aspectjVersion.set('1.9.22.1')
-    }
+configurations {
+    testImplementation.extendsFrom compileOnly
 }
 
 dependencies {
-    // JUnit 5
-    testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
-    testImplementation "org.junit.platform:junit-platform-suite:1.10.2"
+    // REST API Testing
+    testImplementation "io.rest-assured:rest-assured:${restAssuredVersion}"
+    testImplementation "io.rest-assured:json-path:${restAssuredVersion}"
+    testImplementation "io.rest-assured:xml-path:${restAssuredVersion}"
+    testImplementation "io.rest-assured:json-schema-validator:${restAssuredVersion}"
 
-
-    // Selenide + Allure интеграция
-    testImplementation "com.codeborne:selenide:$selenideVersion"
-    testImplementation "io.qameta.allure:allure-selenide:$allureVersion"
-    testImplementation 'io.qameta.allure:allure-rest-assured:2.25.0'
-
-    // REST Assured + JSON Schema + Allure интеграция
-    testImplementation "io.rest-assured:rest-assured:$restAssuredVersion"
-    testImplementation "io.rest-assured:json-schema-validator:$restAssuredVersion"
-    testImplementation "io.qameta.allure:allure-rest-assured:$allureVersion"
+    // UI Testing
+    testImplementation "com.codeborne:selenide:${selenideVersion}"
 
     // Cucumber
-    testImplementation "io.cucumber:cucumber-java:$cucumberVersion"
-    testImplementation "io.cucumber:cucumber-junit-platform-engine:$cucumberVersion"
-    // PicoContainer — для передачи ScenarioContext между шагами
-    testImplementation "io.cucumber:cucumber-picocontainer:$cucumberVersion"
+    testImplementation "io.cucumber:cucumber-java:${cucumberVersion}"
+    testImplementation "io.cucumber:cucumber-junit-platform-engine:${cucumberVersion}"
+    testImplementation "io.cucumber:cucumber-picocontainer:${cucumberVersion}"
 
-    // Appium
-    testImplementation "io.appium:java-client:8.6.0"
+    // JUnit
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter-params:${junitVersion}"
+    testImplementation "org.junit.platform:junit-platform-suite:1.10.2"
+    testImplementation "org.junit.platform:junit-platform-launcher:1.10.2"
 
-    // Config
-    testImplementation "org.aeonbits.owner:owner:$ownerVersion"
+    // Allure
+    testImplementation "io.qameta.allure:allure-junit5:${allureVersion}"
+    testImplementation "io.qameta.allure:allure-rest-assured:${allureVersion}"
+    testImplementation "io.qameta.allure:allure-selenide:${allureVersion}"
 
-    // Логи
-    testImplementation "org.slf4j:slf4j-simple:2.0.7"
+    // Assertions
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+    testImplementation "org.hamcrest:hamcrest:2.2"
+
+    // Configuration
+    testImplementation "org.aeonbits.owner:owner:${ownerVersion}"
+
+    // Database
+    testImplementation "org.postgresql:postgresql:${postgresqlVersion}"
+
+    // Logging
+    testImplementation "org.slf4j:slf4j-api:${slf4jVersion}"
+    testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
 
     // Lombok
-    compileOnly 'org.projectlombok:lombok:1.18.30'
-    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+    testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
 
-    // Для тестов
-    testCompileOnly 'org.projectlombok:lombok:1.18.30'
-    testAnnotationProcessor 'org.projectlombok:lombok:1.18.30'
-
-    testImplementation 'org.assertj:assertj-core:3.24.2'
-
-    //postgresql
-    implementation 'org.postgresql:postgresql:42.7.1'
+    // Appium (for mobile testing)
+    testImplementation 'io.appium:java-client:8.6.0'
 }
 
 test {
     useJUnitPlatform()
+    systemProperty "cucumber.junit-platform.naming-strategy", "long"
+    systemProperty "env", System.getProperty("env", "local")
+    systemProperty "allure.results.directory", "build/allure-results"
+
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat "full"
+    }
+}
+
+allure {
+    report {
+        version.set(allureVersion)
+    }
+    adapter {
+        aspectjWeaver.set(true)
+        frameworks {
+            junit5 {
+                adapterVersion.set(allureVersion)
+            }
+        }
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+tasks.withType(Test) {
+    systemProperty "file.encoding", "UTF-8"
+    systemProperty "user.timezone", "UTC"
+}
+
+task smokeTest(type: Test) {
+    useJUnitPlatform()
+    systemProperty "cucumber.filter.tags", "@Smoke"
+    systemProperty "env", System.getProperty("env", "ci")
+}
+
+task regressionTest(type: Test) {
+    useJUnitPlatform()
+    systemProperty "cucumber.filter.tags", "@Regression"
+    systemProperty "env", System.getProperty("env", "ci")
+}
+
+task apiTest(type: Test) {
+    useJUnitPlatform()
+    systemProperty "cucumber.filter.tags", "@API"
+    systemProperty "env", System.getProperty("env", "ci")
+}
+
+wrapper {
+    gradleVersion = '7.4'
+    distributionType = Wrapper.DistributionType.ALL
 }
