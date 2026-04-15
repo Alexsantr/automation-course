@@ -52,48 +52,41 @@ public class AdminServer extends BaseServer {
 
     @Когда("администратор запрашивает список всех пользователей")
     public void adminRequestsAllUsers() {
-        String adminToken = get(ADMIN_TOKEN);
-        usersList = adminApi.getAllUsers(adminToken);
+        usersList = adminApi.getAllUsers(get(ADMIN_TOKEN));
         putObject(USERS_LIST, usersList);
         log.info("Получен список пользователей, количество: {}", usersList.size());
     }
 
     @Когда("администратор блокирует пользователя с id {string}")
     public void adminBlocksUser(String userId) {
-        String adminToken = get(ADMIN_TOKEN);
-        updatedUser = adminApi.blockUser(adminToken, Integer.parseInt(userId));
+        updatedUser = adminApi.blockUser(get(ADMIN_TOKEN), Integer.parseInt(userId));
         putObject(UPDATED_USER, updatedUser);
         log.info("Пользователь {} заблокирован", userId);
     }
 
     @Когда("администратор разблокирует пользователя с id {string}")
     public void adminUnblocksUser(String userId) {
-        String adminToken = get(ADMIN_TOKEN);
-        updatedUser = adminApi.unblockUser(adminToken, Integer.parseInt(userId));
+        updatedUser = adminApi.unblockUser(get(ADMIN_TOKEN), Integer.parseInt(userId));
         putObject(UPDATED_USER, updatedUser);
         log.info("Пользователь {} разблокирован", userId);
     }
 
     @Когда("администратор удаляет пользователя с id {string}")
     public void adminDeletesUser(String userId) {
-        String adminToken = get(ADMIN_TOKEN);
-        actionResponse = adminApi.deleteUser(adminToken, Integer.parseInt(userId));
+        actionResponse = adminApi.deleteUser(get(ADMIN_TOKEN), Integer.parseInt(userId));
         log.info("Пользователь {} удален", userId);
     }
 
     @Когда("администратор запрашивает транзакции пользователя")
     public void adminRequestsUserTransactions() {
-        String adminToken = get(ADMIN_TOKEN);
-        String userId = get(USER_ID);
-        List<TransactionPublic> userTransactions = adminApi.getUserTransactions(adminToken, Integer.parseInt(userId));
+        List<TransactionPublic> userTransactions = adminApi.getUserTransactions(get(ADMIN_TOKEN), Integer.parseInt(get(USER_ID)));
         putObject(USER_TRANSACTIONS, userTransactions);
-        log.info("Получены транзакции пользователя {}", userId);
+        log.info("Получены транзакции пользователя {}", get(USER_ID));
     }
 
     @Когда("администратор восстанавливает базу данных до начального состояния")
     public void adminRestoresDatabase() {
-        String adminToken = get(ADMIN_TOKEN);
-        actionResponse = adminApi.restoreInitialState(adminToken);
+        actionResponse = adminApi.restoreInitialState(get(ADMIN_TOKEN));
         log.info("База данных восстановлена до начального состояния");
     }
 
@@ -123,8 +116,7 @@ public class AdminServer extends BaseServer {
 
     @Тогда("остался только один пользователь - администратор")
     public void onlyAdminUserRemains() {
-        String adminToken = get(ADMIN_TOKEN);
-        usersList = adminApi.getAllUsers(adminToken);
+        usersList = adminApi.getAllUsers(get(ADMIN_TOKEN));
 
         assertThat(usersList).isNotNull();
         assertThat(usersList).hasSize(1);
@@ -137,8 +129,7 @@ public class AdminServer extends BaseServer {
 
     @Тогда("у администратора логин {string}")
     public void adminHasLogin(String expectedLogin) {
-        String adminToken = get(ADMIN_TOKEN);
-        usersList = adminApi.getAllUsers(adminToken);
+        usersList = adminApi.getAllUsers(get(ADMIN_TOKEN));
 
         assertThat(usersList).isNotNull();
         assertThat(usersList).isNotEmpty();

@@ -111,6 +111,11 @@ task apiTest(type: Test) {
     systemProperty "cucumber.filter.tags", "@API"
 }
 
+task debugTest(type: Test) {
+    systemProperty "env", System.getProperty("env", "ci")
+    systemProperty "cucumber.filter.tags", "@Debug"
+}
+
 allure {
     report {
         version.set(allureVersion)

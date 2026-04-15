@@ -36,13 +36,11 @@ public class AuthServer extends BaseServer {
      * Один экземпляр на сценарий в {@link ScenarioContext}; закрывается в {@link Hooks#tearDown()}.
      */
     private DatabaseHelper databaseHelper() {
-        Object existing = context.getObject(DB_HELPER);
-        if (existing instanceof DatabaseHelper) {
-            return (DatabaseHelper) existing;
+        if (context.getObject(DB_HELPER) instanceof DatabaseHelper) {
+            return (DatabaseHelper) context.getObject(DB_HELPER);
         }
-        DatabaseHelper db = new DatabaseHelper();
-        context.putObject(DB_HELPER, db);
-        return db;
+        context.putObject(DB_HELPER, new DatabaseHelper());
+        return new DatabaseHelper();
     }
 
 
@@ -61,65 +59,57 @@ public class AuthServer extends BaseServer {
 
     @Допустим("я беру пользователя с логином {string} из базы данных")
     public void takeUserByLoginFromDatabase(String login) {
-        DatabaseHelper.UserCredentials user = databaseHelper().getUserByLogin(login);
-        assertThat(user).isNotNull();
+        assertThat(databaseHelper().getUserByLogin(login)).isNotNull();
 
-        put(USER_LOGIN, user.getLogin());
-        put(USER_PASSWORD, user.getPassword());
+        put(USER_LOGIN, databaseHelper().getUserByLogin(login).getLogin());
+        put(USER_PASSWORD, databaseHelper().getUserByLogin(login).getPassword());
 
-        log.info("Взят пользователь из БД: login={}", user.getLogin());
+        log.info("Взят пользователь из БД: login={}", databaseHelper().getUserByLogin(login).getLogin());
     }
 
     @Допустим("я беру пользователя с id {int} из базы данных")
     public void takeUserByIdFromDatabase(int userId) {
-        DatabaseHelper.UserCredentials user = databaseHelper().getUserById(userId);
-        assertThat(user).isNotNull();
+        assertThat(databaseHelper().getUserById(userId)).isNotNull();
 
-        put(USER_LOGIN, user.getLogin());
-        put(USER_PASSWORD, user.getPassword());
+        put(USER_LOGIN, databaseHelper().getUserById(userId).getLogin());
+        put(USER_PASSWORD, databaseHelper().getUserById(userId).getPassword());
 
-        log.info("Взят пользователь из БД: id={}, login={}", userId, user.getLogin());
+        log.info("Взят пользователь из БД: id={}, login={}", userId, databaseHelper().getUserById(userId).getLogin());
     }
 
     @Допустим("пользователь с логином {string} существует в базе данных")
     public void userExistsInDatabase(String login) {
-        DatabaseHelper.UserCredentials user = databaseHelper().getUserByLogin(login);
-        assertThat(user).isNotNull();
-        assertThat(user.getLogin()).isEqualTo(login);
+        assertThat(databaseHelper().getUserByLogin(login)).isNotNull();
+        assertThat(databaseHelper().getUserByLogin(login).getLogin()).isEqualTo(login);
         log.info("Пользователь с логином {} существует в БД", login);
     }
 
     @Допустим("я авторизуюсь под пользователем из базы данных")
     public void authorizeWithUserFromDatabase() {
-        String login = get(USER_LOGIN);
-        String password = get(USER_PASSWORD);
 
-        assertThat(login).isNotNull();
-        assertThat(password).isNotNull();
+        assertThat(get(USER_LOGIN)).isNotNull();
+        assertThat(get(USER_PASSWORD)).isNotNull();
 
-        AuthResponse authResponse = authUsr.getAuthUser(new AuthRequest(login, password));
+        AuthResponse authResponse = authUsr.getAuthUser(new AuthRequest(get(USER_LOGIN), get(USER_PASSWORD)));
         put(USER_TOKEN, authResponse.getAccess_token());
 
-        log.info("Авторизован под пользователем из БД: login={}", login);
+        log.info("Авторизован под пользователем из БД: login={}", get(USER_LOGIN));
     }
 
     // ==================== СУЩЕСТВУЮЩИЕ ШАГИ ====================
 
     @Допустим("я создаю пользователя с логином {string} и паролем {string}")
     public void createNewUser(String login, String password) {
-        String finalLogin = UserDataGenerator.resolve(login);
-        String finalPassword = UserDataGenerator.resolve(password);
 
         requestBuilder = RegisterRequest.builder()
-                .login(finalLogin)
-                .password(finalPassword);
-        log.info("Установлены учетные данные: login={}, password={}", finalLogin, finalPassword);
+                .login(UserDataGenerator.resolve(login))
+                .password(UserDataGenerator.resolve(password));
+        log.info("Установлены учетные данные: login={}, password={}", UserDataGenerator.resolve(login), UserDataGenerator.resolve(password));
     }
 
     @Когда("клиент регистрируется на сайте шляпабанк")
     public void registerUser() {
-        RegisterRequest request = requestBuilder.build();
-        registerResponse = authUsr.authUser(request);
+        registerResponse = authUsr.authUser(requestBuilder.build());
         log.info("Регистрация выполнена. Получен ответ: {}", registerResponse);
     }
 
@@ -133,9 +123,8 @@ public class AuthServer extends BaseServer {
 
     @Затем("запоминаем данные по клиенту")
     public void saveDataUser() {
-        RegisterRequest request = requestBuilder.build();
-        put(USER_LOGIN, request.getLogin());
-        put(USER_PASSWORD, request.getPassword());
+        put(USER_LOGIN, requestBuilder.build().getLogin());
+        put(USER_PASSWORD, requestBuilder.build().getPassword());
         log.info("Сохранены данные: login={}, password={}",
                 get(USER_LOGIN),
                 get(USER_PASSWORD));
@@ -143,10 +132,8 @@ public class AuthServer extends BaseServer {
 
     @Затем("клиент авторизуется")
     public void authUser() {
-        String login = get(USER_LOGIN);
-        String password = get(USER_PASSWORD);
 
-        AuthResponse authResponse = authUsr.getAuthUser(new AuthRequest(login, password));
+        AuthResponse authResponse = authUsr.getAuthUser(new AuthRequest(get(USER_LOGIN), get(USER_PASSWORD)));
 
         put(USER_TOKEN, authResponse.getAccess_token());
         log.info("Токен получен и сохранён: {}", authResponse.getAccess_token());
@@ -154,18 +141,16 @@ public class AuthServer extends BaseServer {
 
     @Тогда("клиент авторизован")
     public void checkAuthUser() {
-        String token = get(USER_TOKEN);
 
-        assertThat(token)
+        assertThat(get(USER_TOKEN))
                 .isNotNull()
                 .isNotBlank();
-        log.info("Проверка пройдена, токен валиден: {}", token);
+        log.info("Проверка пройдена, токен валиден: {}", get(USER_TOKEN));
     }
 
     @Допустим("пользователь авторизован в системе")
     public void userIsAuthorized() {
-        String token = get(USER_TOKEN);
-        if (token != null && !token.isEmpty()) {
+        if (get(USER_TOKEN) != null && !get(USER_TOKEN).isEmpty()) {
             log.info("Пользователь уже авторизован");
             return;
         }

@@ -2,7 +2,6 @@ package cucumber.step;
 
 import api.helper.HelperApi;
 import api.helper.IHelperApi;
-import io.cucumber.java.ru.Допустим;
 import io.cucumber.java.ru.Когда;
 import io.cucumber.java.ru.Тогда;
 import model.account.AccountPublic;
@@ -33,8 +32,7 @@ public class HelperServer extends BaseServer {
 
     @Когда("клиент запрашивает OTP код")
     public void requestOtpCode() {
-        String token = get(USER_TOKEN);
-        otpCode = helperApi.getOtpCode(token);
+        otpCode = helperApi.getOtpCode(get(USER_TOKEN));
         put(OTP_CODE, otpCode);
         log.info("OTP код получен: {}", otpCode);
     }
@@ -55,71 +53,55 @@ public class HelperServer extends BaseServer {
 
     @Когда("клиент увеличивает баланс счета на сумму {string} через helper")
     public void increaseBalanceViaHelper(String amount) {
-        String token = get(USER_TOKEN);
-        String accountId = get(ACCOUNT_ID);
 
         // Сохраняем баланс до увеличения
-        String balanceBefore = get(ACCOUNT_BALANCE);
 
-        updatedAccount = helperApi.increaseBalance(token, Integer.parseInt(accountId), amount, null);
+        updatedAccount = helperApi.increaseBalance(get(USER_TOKEN), Integer.parseInt(get(ACCOUNT_ID)), amount, null);
 
         put(ACCOUNT_BALANCE, updatedAccount.getBalance());
         log.info("Баланс счета {} увеличен на {}: {} -> {}",
-                accountId, amount, balanceBefore, updatedAccount.getBalance());
+                get(ACCOUNT_ID), amount, get(ACCOUNT_BALANCE), updatedAccount.getBalance());
     }
 
     @Когда("клиент увеличивает баланс счета на сумму {string} с назначением {string}")
     public void increaseBalanceWithPurpose(String amount, String purpose) {
-        String token = get(USER_TOKEN);
-        String accountId = get(ACCOUNT_ID);
 
-        String balanceBefore = get(ACCOUNT_BALANCE);
-
-        updatedAccount = helperApi.increaseBalance(token, Integer.parseInt(accountId), amount, purpose);
+        updatedAccount = helperApi.increaseBalance(get(USER_TOKEN), Integer.parseInt(get(ACCOUNT_ID)), amount, purpose);
 
         put(ACCOUNT_BALANCE, updatedAccount.getBalance());
         log.info("Баланс счета {} увеличен на {} с назначением {}: {} -> {}",
-                accountId, amount, purpose, balanceBefore, updatedAccount.getBalance());
+                get(ACCOUNT_ID), amount, purpose, get(ACCOUNT_BALANCE), updatedAccount.getBalance());
     }
 
     // ==================== Уменьшение баланса ====================
 
     @Когда("клиент уменьшает баланс счета на сумму {string} через helper")
     public void decreaseBalanceViaHelper(String amount) {
-        String token = get(USER_TOKEN);
-        String accountId = get(ACCOUNT_ID);
 
-        String balanceBefore = get(ACCOUNT_BALANCE);
-
-        updatedAccount = helperApi.decreaseBalance(token, Integer.parseInt(accountId), amount);
+        updatedAccount = helperApi.decreaseBalance(get(USER_TOKEN), Integer.parseInt(get(ACCOUNT_ID)), amount);
 
         put(ACCOUNT_BALANCE, updatedAccount.getBalance());
         log.info("Баланс счета {} уменьшен на {}: {} -> {}",
-                accountId, amount, balanceBefore, updatedAccount.getBalance());
+                get(ACCOUNT_ID), amount, get(ACCOUNT_BALANCE), updatedAccount.getBalance());
     }
 
     // ==================== Обнуление баланса ====================
 
     @Когда("клиент обнуляет баланс счета через helper")
     public void zeroBalanceViaHelper() {
-        String token = get(USER_TOKEN);
-        String accountId = get(ACCOUNT_ID);
 
-        String balanceBefore = get(ACCOUNT_BALANCE);
-
-        updatedAccount = helperApi.zeroBalance(token, Integer.parseInt(accountId));
+        updatedAccount = helperApi.zeroBalance(get(USER_TOKEN), Integer.parseInt(get(ACCOUNT_ID)));
 
         put(ACCOUNT_BALANCE, updatedAccount.getBalance());
         log.info("Баланс счета {} обнулен: {} -> {}",
-                accountId, balanceBefore, updatedAccount.getBalance());
+                get(ACCOUNT_ID), get(ACCOUNT_BALANCE), updatedAccount.getBalance());
     }
 
     // ==================== Очистка кеша ====================
 
     @Когда("клиент запрашивает очистку кеша браузера")
     public void requestClearBrowserCache() {
-        String token = get(USER_TOKEN);
-        clearCacheInstructions = helperApi.clearBrowserCache(token);
+        clearCacheInstructions = helperApi.clearBrowserCache(get(USER_TOKEN));
         put(CLEAR_CACHE_INSTRUCTIONS, clearCacheInstructions);
         log.info("Запрошена очистка кеша браузера");
     }
@@ -135,14 +117,13 @@ public class HelperServer extends BaseServer {
 
     @Когда("клиент запрашивает список счетов через helper")
     public void requestHelperAccounts() {
-        String token = get(USER_TOKEN);
-        List<AccountPublic> accounts = helperApi.getHelperAccounts(token);
+        List<AccountPublic> accounts = helperApi.getHelperAccounts(get(USER_TOKEN));
 
         assertThat(accounts).isNotNull();
         assertThat(accounts).isNotEmpty();
 
         // Сохраняем первый счет
-        AccountPublic firstAccount = accounts.get(0);
+        AccountPublic firstAccount = accounts.getFirst();
         put(ACCOUNT_ID, String.valueOf(firstAccount.getId()));
         put(ACCOUNT_BALANCE, firstAccount.getBalance());
 
@@ -154,28 +135,24 @@ public class HelperServer extends BaseServer {
 
     @Тогда("баланс счета увеличился на {string}")
     public void accountBalanceIncreasedBy(String expectedIncrease) {
-        String balanceBefore = get(ACCOUNT_BALANCE);
-        String balanceAfter = updatedAccount.getBalance();
 
-        BigDecimal before = new BigDecimal(balanceBefore);
-        BigDecimal after = new BigDecimal(balanceAfter);
+        BigDecimal before = new BigDecimal(get(ACCOUNT_BALANCE));
+        BigDecimal after = new BigDecimal(updatedAccount.getBalance());
         BigDecimal increase = new BigDecimal(expectedIncrease);
 
         assertThat(after).isEqualTo(before.add(increase));
-        log.info("Баланс увеличился на {}: {} -> {}", expectedIncrease, balanceBefore, balanceAfter);
+        log.info("Баланс увеличился на {}: {} -> {}", expectedIncrease, get(ACCOUNT_BALANCE), updatedAccount.getBalance());
     }
 
     @Тогда("баланс счета уменьшился на {string}")
     public void accountBalanceDecreasedBy(String expectedDecrease) {
-        String balanceBefore = get(ACCOUNT_BALANCE);
-        String balanceAfter = updatedAccount.getBalance();
 
-        BigDecimal before = new BigDecimal(balanceBefore);
-        BigDecimal after = new BigDecimal(balanceAfter);
+        BigDecimal before = new BigDecimal(get(ACCOUNT_BALANCE));
+        BigDecimal after = new BigDecimal(updatedAccount.getBalance());
         BigDecimal decrease = new BigDecimal(expectedDecrease);
 
         assertThat(after).isEqualTo(before.subtract(decrease));
-        log.info("Баланс уменьшился на {}: {} -> {}", expectedDecrease, balanceBefore, balanceAfter);
+        log.info("Баланс уменьшился на {}: {} -> {}", expectedDecrease, get(ACCOUNT_BALANCE), updatedAccount.getBalance());
     }
 
     @Тогда("баланс счета стал равен {string}")

@@ -236,11 +236,8 @@ public class TransfersServer extends BaseServer {
 
     @Тогда("баланс счета получателя увеличился на {string}")
     public void toAccountBalanceIncreasedBy(String expectedIncrease) {
-        String token = get(USER_TOKEN);
-        String toAccountId = get(TO_ACCOUNT_ID);
 
-        AccountPublic currentAccount = accountsApi.getAccountById(token, Integer.parseInt(toAccountId));
-        String currentBalance = currentAccount.getBalance();
+        AccountPublic currentAccount = accountsApi.getAccountById(get(USER_TOKEN), Integer.parseInt(get(TO_ACCOUNT_ID)));
 
         // Получаем баланс до операции (если не сохранен, берем из контекста)
         String balanceBefore = get(TO_ACCOUNT_BALANCE);
@@ -251,11 +248,11 @@ public class TransfersServer extends BaseServer {
         BigDecimal before = new BigDecimal(balanceBefore);
         BigDecimal increase = new BigDecimal(expectedIncrease);
         BigDecimal expected = before.add(increase);
-        BigDecimal actual = new BigDecimal(currentBalance);
+        BigDecimal actual = new BigDecimal(currentAccount.getBalance());
 
         assertThat(actual).isEqualTo(expected);
         log.info("Баланс счета получателя увеличился с {} на {} = {}",
-                balanceBefore, expectedIncrease, currentBalance);
+                balanceBefore, expectedIncrease, currentAccount.getBalance());
     }
 
     @Тогда("счет найден")
@@ -303,9 +300,8 @@ public class TransfersServer extends BaseServer {
 
     @Тогда("курс USD/RUB больше 0")
     public void usdToRubRateGreaterThanZero() {
-        double usdRate = exchangeRates.getRates().get("USD");
-        assertThat(usdRate).isGreaterThan(0);
-        log.info("Курс USD/RUB = {}", usdRate);
+        assertThat((double) exchangeRates.getRates().get("USD")).isGreaterThan(0);
+        log.info("Курс USD/RUB = {}", exchangeRates.getRates().get("USD"));
     }
 
     @Тогда("транзакция обмена успешно создана")
@@ -323,17 +319,13 @@ public class TransfersServer extends BaseServer {
 
     @Тогда("USD счет увеличился на сумму по курсу")
     public void usdAccountIncreasedByExchangeRate() {
-        String token = get(USER_TOKEN);
-        String toAccountId = get(TO_ACCOUNT_ID);
 
-        AccountPublic currentAccount = accountsApi.getAccountById(token, Integer.parseInt(toAccountId));
-        String currentBalance = currentAccount.getBalance();
-        String balanceBefore = toAccountBalanceBefore != null ? toAccountBalanceBefore : "0";
+        AccountPublic currentAccount = accountsApi.getAccountById(get(USER_TOKEN), Integer.parseInt(get(TO_ACCOUNT_ID)));
 
-        BigDecimal before = new BigDecimal(balanceBefore);
-        BigDecimal actual = new BigDecimal(currentBalance);
+        BigDecimal before = new BigDecimal(toAccountBalanceBefore != null ? toAccountBalanceBefore : "0");
+        BigDecimal actual = new BigDecimal(currentAccount.getBalance());
 
         assertThat(actual).isGreaterThan(before);
-        log.info("USD счет увеличился с {} до {}", balanceBefore, currentBalance);
+        log.info("USD счет увеличился с {} до {}", toAccountBalanceBefore != null ? toAccountBalanceBefore : "0", currentAccount.getBalance());
     }
 }
