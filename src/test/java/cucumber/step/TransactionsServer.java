@@ -40,10 +40,9 @@ public class TransactionsServer extends BaseServer {
 
     @Допустим("у пользователя есть выполненные операции")
     public void userHasCompletedTransactions() {
-        String token = get(USER_TOKEN);
 
         try {
-            transactionsList = transactionsApi.getTransactions(token);
+            transactionsList = transactionsApi.getTransactions(get(USER_TOKEN));
             assertThat(transactionsList).isNotNull();
             assertThat(transactionsList).isNotEmpty();
             putObject(TRANSACTIONS_LIST, transactionsList);
@@ -69,10 +68,9 @@ public class TransactionsServer extends BaseServer {
 
     @Когда("клиент запрашивает историю операций")
     public void clientRequestsTransactionsHistory() {
-        String token = get(USER_TOKEN);
 
         try {
-            transactionsList = transactionsApi.getTransactions(token);
+            transactionsList = transactionsApi.getTransactions(get(USER_TOKEN));
             rememberHttpStatus(200);
             putObject(TRANSACTIONS_LIST, transactionsList);
             log.info("Запрошена история операций, получено {} записей", transactionsList.size());
@@ -87,10 +85,9 @@ public class TransactionsServer extends BaseServer {
 
     @Когда("клиент скачивает чек по операции {string}")
     public void clientDownloadsReceipt(String transactionId) {
-        String token = get(USER_TOKEN);
 
         try {
-            receiptHtml = transactionsApi.getReceipt(token, Integer.parseInt(transactionId));
+            receiptHtml = transactionsApi.getReceipt(get(USER_TOKEN), Integer.parseInt(transactionId));
             rememberHttpStatus(200);
             put(RECEIPT_HTML, receiptHtml);
             log.info("Скачан чек по операции: {}", transactionId);
@@ -105,10 +102,9 @@ public class TransactionsServer extends BaseServer {
 
     @Когда("клиент пытается скачать чек по операции {string}")
     public void clientTriesToDownloadReceipt(String transactionId) {
-        String token = get(USER_TOKEN);
 
         try {
-            receiptHtml = transactionsApi.getReceipt(token, Integer.parseInt(transactionId));
+            receiptHtml = transactionsApi.getReceipt(get(USER_TOKEN), Integer.parseInt(transactionId));
             rememberHttpStatus(200);
         } catch (Exception e) {
             rememberHttpStatus(403);

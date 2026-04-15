@@ -18,8 +18,7 @@ public class UserDataGenerator {
 
     public static String generateLogin() {
         String name = FIRST_NAMES.get(RANDOM.nextInt(FIRST_NAMES.size()));
-        int number = RANDOM.nextInt(1000);
-        return name + number;
+        return name + RANDOM.nextInt(1000);
     }
 
     public static String generatePassword() {

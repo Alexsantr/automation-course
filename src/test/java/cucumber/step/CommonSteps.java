@@ -39,8 +39,7 @@ public class CommonSteps extends BaseServer {
 
     @Тогда("получаем счета по клиенту")
     public void getAcc() {
-        String token = get(USER_TOKEN);
-        List<AccountPublic> accounts = accountsApi.getAccounts(token);
+        List<AccountPublic> accounts = accountsApi.getAccounts(get(USER_TOKEN));
 
         assertThat(accounts).isNotNull();
         assertThat(accounts).isNotEmpty();
@@ -80,29 +79,25 @@ public class CommonSteps extends BaseServer {
 
     @Когда("я запрашиваю данные пользователя")
     public void requestUserData() {
-        String token = get(USER_TOKEN);
-        String userId = get(USER_ID);
 
-        if (token == null || token.isEmpty()) {
-            userResponse = userApi.getUserByIdPublic(Integer.parseInt(userId));
+        if (get(USER_TOKEN) == null || get(USER_TOKEN).isEmpty()) {
+            userResponse = userApi.getUserByIdPublic(Integer.parseInt(get(USER_ID)));
         } else {
-            userResponse = userApi.getUserById(token, Integer.parseInt(userId));
+            userResponse = userApi.getUserById(get(USER_TOKEN), Integer.parseInt(get(USER_ID)));
         }
 
         putObject(USER_RESPONSE, userResponse);
-        log.info("Запрошены данные пользователя с id: {}", userId);
+        log.info("Запрошены данные пользователя с id: {}", get(USER_ID));
     }
 
     @Когда("клиент делает запрос")
     public void clientMakesRequest() {
-        String token = get(USER_TOKEN);
-        String userId = get(USER_ID);
 
-        if (userId != null) {
-            if (token != null && !token.isEmpty()) {
-                userResponse = userApi.getUserById(token, Integer.parseInt(userId));
+        if (get(USER_ID) != null) {
+            if (get(USER_TOKEN) != null && !get(USER_TOKEN).isEmpty()) {
+                userResponse = userApi.getUserById(get(USER_TOKEN), Integer.parseInt(get(USER_ID)));
             } else {
-                userResponse = userApi.getUserByIdPublic(Integer.parseInt(userId));
+                userResponse = userApi.getUserByIdPublic(Integer.parseInt(get(USER_ID)));
             }
             putObject(USER_RESPONSE, userResponse);
         }

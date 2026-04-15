@@ -38,21 +38,16 @@ public class AccountsServer extends BaseServer {
 
     @Когда("клиент запрашивает список своих счетов")
     public void requestAccountsList() {
-        String token = get(USER_TOKEN);
-        accountsList = accountsApi.getAccounts(token);
+        accountsList = accountsApi.getAccounts(get(USER_TOKEN));
         log.info("Получен список счетов, количество: {}", accountsList.size());
     }
 
     @Когда("клиент открывает новый счет типа {string} с валютой {string}")
     public void openNewAccount(String accountType, String currency) {
-        String token = get(USER_TOKEN);
-
-        AccountCreateRequest request = AccountCreateRequest.builder()
+        createdAccount = accountsApi.createAccount(get(USER_TOKEN), AccountCreateRequest.builder()
                 .account_type(AccountType.valueOf(accountType))
                 .currency(Currency.valueOf(currency))
-                .build();
-
-        createdAccount = accountsApi.createAccount(token, request);
+                .build());
         put(ACCOUNT_ID, String.valueOf(createdAccount.getId()));
         rememberHttpStatus(201);
         log.info("Создан новый счет: id={}, type={}, currency={}",
@@ -61,29 +56,25 @@ public class AccountsServer extends BaseServer {
 
     @Когда("клиент пополняет счет на сумму {string}")
     public void topUpAccount(String amount) {
-        String token = get(USER_TOKEN);
-        String accountId = get(ACCOUNT_ID);
 
         AccountTopupRequest request = AccountTopupRequest.builder()
                 .amount(amount)
                 .otp_code(get(OTP_CODE))
                 .build();
 
-        topupTransaction = accountsApi.topUpAccount(token, Integer.parseInt(accountId), request);
+        topupTransaction = accountsApi.topUpAccount(get(USER_TOKEN), Integer.parseInt(get(ACCOUNT_ID)), request);
         rememberHttpStatus(201);
         context.putObject(LAST_TRANSACTION, topupTransaction);
-        log.info("Счет {} пополнен на сумму {}", accountId, amount);
+        log.info("Счет {} пополнен на сумму {}", get(ACCOUNT_ID), amount);
     }
 
     @Когда("клиент закрывает счет")
     public void closeAccount() {
-        String token = get(USER_TOKEN);
-        String accountId = get(ACCOUNT_ID);
 
         try {
-            actionResponse = accountsApi.closeAccount(token, parseInt(accountId));
+            actionResponse = accountsApi.closeAccount(get(USER_TOKEN), parseInt(get(ACCOUNT_ID)));
             rememberHttpStatus(200);
-            log.info("Счет {} закрыт", accountId);
+            log.info("Счет {} закрыт", get(ACCOUNT_ID));
         } catch (Exception e) {
             log.error("Ошибка при закрытии счета: {}", e.getMessage());
         }
@@ -93,12 +84,10 @@ public class AccountsServer extends BaseServer {
 
     @Когда("клиент пытается закрыть счет")
     public void clientTriesToCloseAccount() {
-        String token = get(USER_TOKEN);
-        String accountId = get(ACCOUNT_ID);
 
         try {
             // Пытаемся закрыть счет, но ожидаем ошибку
-            accountsApi.closeAccount(token, parseInt(accountId));
+            accountsApi.closeAccount(get(USER_TOKEN), parseInt(get(ACCOUNT_ID)));
             rememberHttpStatus(200);
         } catch (Exception e) {
             // Сохраняем информацию об ошибке

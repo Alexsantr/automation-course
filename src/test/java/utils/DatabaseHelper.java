@@ -48,8 +48,7 @@ public class DatabaseHelper {
 
     // Получить пользователя по логину
     public UserCredentials getUserByLogin(String login) {
-        String query = "SELECT login, password_hash FROM users WHERE login = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+        try (PreparedStatement pstmt = connection.prepareStatement("SELECT login, password_hash FROM users WHERE login = ?")) {
             pstmt.setString(1, login);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
@@ -66,8 +65,7 @@ public class DatabaseHelper {
 
     // Получить пользователя по ID
     public UserCredentials getUserById(int userId) {
-        String query = "SELECT login, password_hash FROM users WHERE id = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+        try (PreparedStatement pstmt = connection.prepareStatement("SELECT login, password_hash FROM users WHERE id = ?")) {
             pstmt.setInt(1, userId);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {

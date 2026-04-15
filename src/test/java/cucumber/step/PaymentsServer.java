@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import utils.ScenarioContext;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -47,18 +48,15 @@ public class PaymentsServer extends BaseServer {
 
     @Когда("клиент запрашивает список мобильных операторов")
     public void requestMobileOperators() {
-        String token = get(USER_TOKEN);
-        mobileOperators = paymentsApi.getMobileOperators(token);
+        mobileOperators = paymentsApi.getMobileOperators(get(USER_TOKEN));
         log.info("Получен список мобильных операторов, количество: {}", mobileOperators.size());
     }
 
     @Когда("клиент оплачивает мобильную связь оператору {string} на номер {string} сумму {string}")
     public void payMobile(String operator, String phone, String amount) {
-        String token = get(USER_TOKEN);
-        String accountId = get(ACCOUNT_ID);
         // Сохраняем баланс до оплаты
         try {
-            AccountPublic accountBefore = accountsApi.getAccountById(token, Integer.parseInt(accountId));
+            AccountPublic accountBefore = accountsApi.getAccountById(get(USER_TOKEN), Integer.parseInt(get(ACCOUNT_ID)));
             balanceBefore = accountBefore.getBalance();
             put(ACCOUNT_BALANCE, balanceBefore);
         } catch (Exception e) {
@@ -66,7 +64,7 @@ public class PaymentsServer extends BaseServer {
         }
 
         MobilePaymentRequest request = MobilePaymentRequest.builder()
-                .account_id(Integer.parseInt(accountId))
+                .account_id(Integer.parseInt(get(ACCOUNT_ID)))
                 .operator(operator)
                 .phone(phone)
                 .amount(amount)
@@ -74,7 +72,7 @@ public class PaymentsServer extends BaseServer {
                 .build();
 
         try {
-            paymentTransaction = paymentsApi.payMobile(token, request);
+            paymentTransaction = paymentsApi.payMobile(get(USER_TOKEN), request);
             rememberHttpStatus(201);
             putObject(LAST_TRANSACTION, paymentTransaction);
             log.info("Оплачена мобильная связь: оператор={}, телефон={}, сумма={}", operator, phone, amount);
@@ -89,12 +87,10 @@ public class PaymentsServer extends BaseServer {
 
     @Когда("клиент оплачивает поставщику {string} по лицевому счету {string} сумму {string}")
     public void payVendor(String provider, String accountNumber, String amount) {
-        String token = get(USER_TOKEN);
-        String accountId = get(ACCOUNT_ID);
 
         // Сохраняем баланс до оплаты
         try {
-            AccountPublic accountBefore = accountsApi.getAccountById(token, Integer.parseInt(accountId));
+            AccountPublic accountBefore = accountsApi.getAccountById(get(USER_TOKEN), Integer.parseInt(get(ACCOUNT_ID)));
             balanceBefore = accountBefore.getBalance();
             put(ACCOUNT_BALANCE, balanceBefore);
         } catch (Exception e) {
@@ -102,7 +98,7 @@ public class PaymentsServer extends BaseServer {
         }
 
         VendorPaymentRequest request = VendorPaymentRequest.builder()
-                .account_id(Integer.parseInt(accountId))
+                .account_id(Integer.parseInt(get(ACCOUNT_ID)))
                 .provider(provider)
                 .account_number(accountNumber)
                 .amount(amount)
@@ -110,7 +106,7 @@ public class PaymentsServer extends BaseServer {
                 .build();
 
         try {
-            paymentTransaction = paymentsApi.payVendor(token, request);
+            paymentTransaction = paymentsApi.payVendor(get(USER_TOKEN), request);
             rememberHttpStatus(201);
             putObject(LAST_TRANSACTION, paymentTransaction);
             log.info("Оплачен поставщик: provider={}, account={}, сумма={}", provider, accountNumber, amount);
@@ -125,12 +121,10 @@ public class PaymentsServer extends BaseServer {
 
     @Когда("клиент пытается оплатить сумму {string}")
     public void clientTriesToPayAmount(String amount) {
-        String token = get(USER_TOKEN);
-        String accountId = get(ACCOUNT_ID);
 
         // Сохраняем баланс до оплаты
         try {
-            AccountPublic accountBefore = accountsApi.getAccountById(token, Integer.parseInt(accountId));
+            AccountPublic accountBefore = accountsApi.getAccountById(get(USER_TOKEN), Integer.parseInt(get(ACCOUNT_ID)));
             balanceBefore = accountBefore.getBalance();
             put(ACCOUNT_BALANCE, balanceBefore);
         } catch (Exception e) {
@@ -138,7 +132,7 @@ public class PaymentsServer extends BaseServer {
         }
 
         MobilePaymentRequest request = MobilePaymentRequest.builder()
-                .account_id(Integer.parseInt(accountId))
+                .account_id(Integer.parseInt(get(ACCOUNT_ID)))
                 .operator("MTSha")
                 .phone("+79991234567")
                 .amount(amount)
@@ -146,7 +140,7 @@ public class PaymentsServer extends BaseServer {
                 .build();
 
         try {
-            paymentTransaction = paymentsApi.payMobile(token, request);
+            paymentTransaction = paymentsApi.payMobile(get(USER_TOKEN), request);
             rememberHttpStatus(201);
             putObject(LAST_TRANSACTION, paymentTransaction);
         } catch (Exception e) {
@@ -160,8 +154,7 @@ public class PaymentsServer extends BaseServer {
 
     @Когда("клиент запрашивает список поставщиков услуг")
     public void requestVendorProviders() {
-        String token = get(USER_TOKEN);
-        vendorProviders = paymentsApi.getVendorProviders(token);
+        vendorProviders = paymentsApi.getVendorProviders(get(USER_TOKEN));
         log.info("Получен список поставщиков, количество: {}", vendorProviders.size());
     }
 
@@ -188,28 +181,28 @@ public class PaymentsServer extends BaseServer {
         log.info("Все операторы содержат id и label");
     }
 
-//    @Тогда("баланс счета уменьшился на {string}")
-//    public void accountBalanceDecreasedBy(String expectedDecrease) {
-//        String token = get(USER_TOKEN);
-//        String accountId = get(ACCOUNT_ID);
-//
-//        // Получаем текущий баланс
-//        AccountPublic currentAccount = accountsApi.getAccountById(token, Integer.parseInt(accountId));
-//        String currentBalance = currentAccount.getBalance();
-//
-//        String beforeBalance = balanceBefore != null ? balanceBefore : get(ACCOUNT_BALANCE);
-//        assertThat(beforeBalance).as("баланс до операции (из шага или API)").isNotNull();
-//
-//        // Вычисляем ожидаемый баланс
-//        BigDecimal before = new BigDecimal(beforeBalance);
-//        BigDecimal decrease = new BigDecimal(expectedDecrease);
-//        BigDecimal expected = before.subtract(decrease);
-//        BigDecimal actual = new BigDecimal(currentBalance);
-//
-//        assertThat(actual).isEqualTo(expected);
-//        log.info("Баланс счета уменьшился с {} на {} = {}",
-//                beforeBalance, expectedDecrease, currentBalance);
-//    }
+    @Тогда("баланс счета уменьшился на {string}")
+    public void accountBalanceDecreasedBy(String expectedDecrease) {
+        String token = get(USER_TOKEN);
+        String accountId = get(ACCOUNT_ID);
+
+        // Получаем текущий баланс
+        AccountPublic currentAccount = accountsApi.getAccountById(token, Integer.parseInt(accountId));
+        String currentBalance = currentAccount.getBalance();
+
+        String beforeBalance = balanceBefore != null ? balanceBefore : get(ACCOUNT_BALANCE);
+        assertThat(beforeBalance).as("баланс до операции (из шага или API)").isNotNull();
+
+        // Вычисляем ожидаемый баланс
+        BigDecimal before = new BigDecimal(beforeBalance);
+        BigDecimal decrease = new BigDecimal(expectedDecrease);
+        BigDecimal expected = before.subtract(decrease);
+        BigDecimal actual = new BigDecimal(currentBalance);
+
+        assertThat(actual).isEqualTo(expected);
+        log.info("Баланс счета уменьшился с {} на {} = {}",
+                beforeBalance, expectedDecrease, currentBalance);
+    }
 
     @Тогда("операция не выполнена из-за недостаточного баланса")
     public void operationFailedDueToInsufficientFunds() {

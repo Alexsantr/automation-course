@@ -1,8 +1,8 @@
 package cucumber.step;
 
+import helpers.CustomAllureListener;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
-import io.qameta.allure.restassured.AllureRestAssured;
 import io.restassured.RestAssured;
 import io.restassured.filter.log.RequestLoggingFilter;
 import io.restassured.filter.log.ResponseLoggingFilter;
@@ -41,7 +41,7 @@ public class Hooks {
     public void setUp() {
         RestAssured.reset();
         RestAssured.filters(
-                new AllureRestAssured(),
+                CustomAllureListener.withCustomTemplates(),
                 new RequestLoggingFilter(),
                 new ResponseLoggingFilter()
         );
