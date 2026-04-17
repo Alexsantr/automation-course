@@ -103,9 +103,14 @@ task smokeTest(type: Test) {
     }
 }
 
+
 task regressionTest(type: Test) {
     systemProperty "env", System.getProperty("env", "ci")
     systemProperty "cucumber.filter.tags", "@Regression"
+    filter {
+        includeTestsMatching "cucumber.step.RegressionSuite"
+
+    }
 }
 
 task apiTest(type: Test) {
