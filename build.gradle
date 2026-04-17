@@ -99,7 +99,7 @@ test {
 task smokeTest(type: Test) {
     systemProperty "env", System.getProperty("env", "ci")
     filter {
-        includeTestsMatching "cucumber.step.RegressionSuite"
+        includeTestsMatching "cucumber.step.SmokeSuite"
     }
 }
 
@@ -109,14 +109,19 @@ task regressionTest(type: Test) {
         includeTestsMatching "cucumber.step.RegressionSuite"
     }
 }
+
 task apiTest(type: Test) {
     systemProperty "env", System.getProperty("env", "ci")
-    systemProperty "cucumber.filter.tags", "@API"
+    filter {
+        includeTestsMatching "cucumber.step.ApiSuite"
+    }
 }
 
 task debugTest(type: Test) {
     systemProperty "env", System.getProperty("env", "ci")
-    systemProperty "cucumber.filter.tags", "@Debug"
+    filter {
+        includeTestsMatching "cucumber.step.DebugSuite"
+    }
 }
 
 allure {
