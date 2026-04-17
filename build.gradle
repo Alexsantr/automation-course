@@ -98,7 +98,9 @@ test {
 
 task smokeTest(type: Test) {
     systemProperty "env", System.getProperty("env", "ci")
-    systemProperty "cucumber.filter.tags", "@Smoke"
+    filter {
+        includeTestsMatching "cucumber.step.RegressionSuite"
+    }
 }
 
 task regressionTest(type: Test) {
