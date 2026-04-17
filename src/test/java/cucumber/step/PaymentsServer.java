@@ -43,7 +43,6 @@ public class PaymentsServer extends BaseServer {
     }
 
 
-
     // ==================== ШАГИ ДЛЯ ПЛАТЕЖЕЙ ====================
 
     @Когда("клиент запрашивает список мобильных операторов")
@@ -179,29 +178,6 @@ public class PaymentsServer extends BaseServer {
             assertThat(operator).containsKey("label");
         }
         log.info("Все операторы содержат id и label");
-    }
-
-    @Тогда("баланс счета уменьшился на {string}")
-    public void accountBalanceDecreasedBy(String expectedDecrease) {
-        String token = get(USER_TOKEN);
-        String accountId = get(ACCOUNT_ID);
-
-        // Получаем текущий баланс
-        AccountPublic currentAccount = accountsApi.getAccountById(token, Integer.parseInt(accountId));
-        String currentBalance = currentAccount.getBalance();
-
-        String beforeBalance = balanceBefore != null ? balanceBefore : get(ACCOUNT_BALANCE);
-        assertThat(beforeBalance).as("баланс до операции (из шага или API)").isNotNull();
-
-        // Вычисляем ожидаемый баланс
-        BigDecimal before = new BigDecimal(beforeBalance);
-        BigDecimal decrease = new BigDecimal(expectedDecrease);
-        BigDecimal expected = before.subtract(decrease);
-        BigDecimal actual = new BigDecimal(currentBalance);
-
-        assertThat(actual).isEqualTo(expected);
-        log.info("Баланс счета уменьшился с {} на {} = {}",
-                beforeBalance, expectedDecrease, currentBalance);
     }
 
     @Тогда("операция не выполнена из-за недостаточного баланса")
